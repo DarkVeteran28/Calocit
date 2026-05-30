@@ -917,6 +917,109 @@
       color: var(--color-accent);
     }
 
+    .scan-result__hero {
+      padding-bottom: var(--space-sm);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .scan-result__meal-name {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.125rem;
+      color: var(--color-text);
+      margin-bottom: var(--space-xs);
+    }
+
+    .scan-result__meta {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
+
+    .scan-result__summary {
+      font-size: 0.875rem;
+      color: var(--color-text-muted);
+      line-height: 1.55;
+    }
+
+    .scan-score-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-xs);
+    }
+
+    .scan-score-chip {
+      background: var(--color-surface-elevated);
+      border-radius: var(--radius-sm);
+      padding: var(--space-xs) var(--space-sm);
+      font-size: 0.6875rem;
+    }
+
+    .scan-score-chip strong {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 0.875rem;
+      color: var(--color-accent);
+    }
+
+    .scan-result__item-analysis {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      line-height: 1.5;
+      margin: var(--space-sm) 0;
+    }
+
+    .scan-result__item-tags {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+      font-size: 0.75rem;
+    }
+
+    .scan-result__item-tags ul {
+      margin: 0;
+      padding-left: var(--space-md);
+      color: var(--color-text-subtle);
+    }
+
+    .scan-result__section-title {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-subtle);
+      margin-bottom: var(--space-xs);
+    }
+
+    .scan-result__block {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      line-height: 1.5;
+    }
+
+    .scan-result__insights {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .scan-result__insights li {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      padding-left: var(--space-md);
+      position: relative;
+    }
+
+    .scan-result__insights li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--color-accent);
+    }
+
     .scan-add-btn {
       width: 100%;
       padding: var(--space-md);
@@ -1238,18 +1341,22 @@
 
       <div class="scan-loading" id="scanLoading" aria-live="polite">
         <div class="scan-spinner" aria-hidden="true"></div>
-        <p class="scan-loading__text">Gemini is analyzing your meal…</p>
+        <p class="scan-loading__text">NutriLens AI is analyzing your meal…</p>
       </div>
 
       <section class="scan-result" id="scanResult" aria-label="Analysis results">
-        <h2 class="scan-result__title">Detected foods</h2>
+        <div id="scanResultHero" class="scan-result__hero"></div>
+        <p id="scanResultSummary" class="scan-result__summary"></p>
+        <div id="scanResultScores" class="scan-score-grid"></div>
+        <h2 class="scan-result__title">Food breakdown</h2>
         <ul class="scan-result__list" id="scanResultList"></ul>
         <div class="scan-result__total">
           <span>Total calories</span>
           <span class="scan-result__total-value" id="scanTotalCal">0 kcal</span>
         </div>
+        <div id="scanResultFooter"></div>
         <button type="button" class="scan-add-btn" onclick="addToDiary()">
-          Add to Today's Diary
+          Add All Items to Today's Diary
         </button>
       </section>
     </div>
@@ -1395,62 +1502,70 @@
       ENDPOINT_BASE: "https://generativelanguage.googleapis.com/v1beta/models",
       MAX_RETRIES: 3,
       BACKOFF_BASE_MS: 1000,
-      TEMPERATURE: 0.1,
-      /** Default output budget — nutrition JSON needs only ~200 tokens. */
-      MAX_OUTPUT_TOKENS: 2048,
+      TEMPERATURE: 0.35,
+      /** Rich coaching analysis requires a large output budget. */
+      MAX_OUTPUT_TOKENS: 8192,
       /** Retry ceiling when MAX_TOKENS truncation occurs. */
-      MAX_OUTPUT_TOKENS_RETRY: 8192,
+      MAX_OUTPUT_TOKENS_RETRY: 16384,
       /** Disable internal "thinking" so tokens go to the JSON answer (fixes thoughtsTokenCount: 980). */
       THINKING_BUDGET: 0,
       DEBUG_KEY: "nutriLensGeminiDebug",
     };
 
-    const GEMINI_PROMPT = `You are an expert nutritionist analyzing a food photo.
+    const GEMINI_PROMPT = `You are NutriLens AI — an expert nutritionist, food scientist, fitness coach, and dietary analyst.
 
-CRITICAL: Output ONLY one valid JSON object. No markdown, no code fences, no explanation, no text before or after the JSON.
+Analyze the food image and produce an extremely detailed, engaging, educational breakdown.
 
-Use EXACTLY this schema (all keys required):
+IMPORTANT RULES:
+1. Identify every visible food item separately in the "items" array.
+2. Estimate portion size, calories, protein_g, carbs_g, fat_g, and fiber_g for each item.
+3. Write vivid but factual "analysis" for each item (never only numbers).
+4. Explain nutritional role, benefits, and concerns per item.
+5. Cover energy, muscle growth, recovery, satiety, and blood sugar where relevant.
+6. State uncertainty when estimates are approximate.
+7. Speak as an intelligent nutrition coach.
+8. Output ONLY valid JSON — no markdown fences, no text outside JSON.
+
+Also estimate: glycemic_load_estimate, micronutrient_highlights (array), vitamin_analysis, mineral_analysis, satiety_score (1-10), muscle_building_score (1-10), weight_loss_score (1-10), heart_health_score (1-10), meal_balance_score (1-10), processing_level (e.g. "Whole food" or "Ultra-processed").
+
+OUTPUT JSON SCHEMA (all keys required):
 {
-  "food_name": "specific dish name",
-  "estimated_calories": 0,
-  "protein_g": 0,
-  "carbs_g": 0,
-  "fat_g": 0,
-  "confidence": 0.0,
-  "ingredients": ["ingredient1", "ingredient2"]
+  "meal_name": "",
+  "total_calories": 0,
+  "confidence": 0,
+  "summary": "",
+  "meal_quality_score": 0,
+  "glycemic_load_estimate": "",
+  "micronutrient_highlights": [],
+  "vitamin_analysis": "",
+  "mineral_analysis": "",
+  "satiety_score": 0,
+  "muscle_building_score": 0,
+  "weight_loss_score": 0,
+  "heart_health_score": 0,
+  "meal_balance_score": 0,
+  "processing_level": "",
+  "items": [
+    {
+      "name": "",
+      "estimated_portion": "",
+      "calories": 0,
+      "protein_g": 0,
+      "carbs_g": 0,
+      "fat_g": 0,
+      "fiber_g": 0,
+      "analysis": "",
+      "benefits": [],
+      "concerns": []
+    }
+  ],
+  "overall_assessment": "",
+  "fitness_recommendation": "",
+  "health_insights": [],
+  "improvement_suggestions": []
 }
 
-Rules:
-- food_name: specific (e.g. "Grilled Chicken Breast with Rice", not "food")
-- estimated_calories, protein_g, carbs_g, fat_g: numbers only (grams for macros, kcal for calories)
-- confidence: 0.0 to 1.0 for your estimate certainty
-- ingredients: visible components; use [] if none
-- If multiple distinct items are visible, combine into one meal name and list parts in ingredients`;
-
-    const GEMINI_RESPONSE_SCHEMA = {
-      type: "OBJECT",
-      properties: {
-        food_name: { type: "STRING" },
-        estimated_calories: { type: "NUMBER" },
-        protein_g: { type: "NUMBER" },
-        carbs_g: { type: "NUMBER" },
-        fat_g: { type: "NUMBER" },
-        confidence: { type: "NUMBER" },
-        ingredients: {
-          type: "ARRAY",
-          items: { type: "STRING" },
-        },
-      },
-      required: [
-        "food_name",
-        "estimated_calories",
-        "protein_g",
-        "carbs_g",
-        "fat_g",
-        "confidence",
-        "ingredients",
-      ],
-    };
+total_calories must equal the sum of items[].calories. confidence is 0.0-1.0.`;
 
     const GeminiErrorType = {
       INVALID_API_KEY: "Invalid API Key",
@@ -1607,7 +1722,6 @@ Rules:
 
         if (useStructuredOutput) {
           generationConfig.responseMimeType = "application/json";
-          generationConfig.responseSchema = GEMINI_RESPONSE_SCHEMA;
         }
 
         return {
@@ -1768,52 +1882,113 @@ Rules:
         };
       },
 
+      mapItemToFood(item) {
+        return {
+          name: String(item?.name || "Food").trim() || "Food",
+          portion: String(item?.estimated_portion || item?.portion || ""),
+          calories: Math.max(0, Number(item?.calories) || 0),
+          protein: Math.max(0, Number(item?.protein_g ?? item?.protein) || 0),
+          carbs: Math.max(0, Number(item?.carbs_g ?? item?.carbs) || 0),
+          fat: Math.max(0, Number(item?.fat_g ?? item?.fat) || 0),
+          fiber: Math.max(0, Number(item?.fiber_g) || 0),
+          analysis: String(item?.analysis || ""),
+          benefits: Array.isArray(item?.benefits) ? item.benefits.map(String) : [],
+          concerns: Array.isArray(item?.concerns) ? item.concerns.map(String) : [],
+        };
+      },
+
       normalizeNutritionPayload(raw) {
         if (!raw || typeof raw !== "object") return null;
+
+        if (Array.isArray(raw.items) && raw.items.length > 0) {
+          const foods = raw.items.map((item) => this.mapItemToFood(item));
+          const totalCalories =
+            Math.max(0, Number(raw.total_calories) || 0) ||
+            foods.reduce((sum, f) => sum + f.calories, 0);
+
+          return {
+            foods,
+            totalCalories,
+            mealAnalysis: {
+              meal_name: String(raw.meal_name || "Analyzed meal"),
+              total_calories: totalCalories,
+              confidence: Number(raw.confidence) || 0,
+              summary: String(raw.summary || ""),
+              meal_quality_score: Number(raw.meal_quality_score) || 0,
+              glycemic_load_estimate: String(raw.glycemic_load_estimate || ""),
+              micronutrient_highlights: Array.isArray(raw.micronutrient_highlights)
+                ? raw.micronutrient_highlights.map(String)
+                : [],
+              vitamin_analysis: String(raw.vitamin_analysis || ""),
+              mineral_analysis: String(raw.mineral_analysis || ""),
+              satiety_score: Number(raw.satiety_score) || 0,
+              muscle_building_score: Number(raw.muscle_building_score) || 0,
+              weight_loss_score: Number(raw.weight_loss_score) || 0,
+              heart_health_score: Number(raw.heart_health_score) || 0,
+              meal_balance_score: Number(raw.meal_balance_score) || 0,
+              processing_level: String(raw.processing_level || ""),
+              overall_assessment: String(raw.overall_assessment || ""),
+              fitness_recommendation: String(raw.fitness_recommendation || ""),
+              health_insights: Array.isArray(raw.health_insights)
+                ? raw.health_insights.map(String)
+                : [],
+              improvement_suggestions: Array.isArray(raw.improvement_suggestions)
+                ? raw.improvement_suggestions.map(String)
+                : [],
+            },
+          };
+        }
 
         if (raw.food_name != null || raw.estimated_calories != null) {
           const ingredients = Array.isArray(raw.ingredients)
             ? raw.ingredients.filter(Boolean).map(String)
             : [];
-          const name = String(raw.food_name || "Analyzed meal").trim() || "Analyzed meal";
-          const calories = Math.max(0, Number(raw.estimated_calories) || 0);
-          const confidence = Number(raw.confidence);
-          const portion =
-            ingredients.length > 0
-              ? ingredients.join(", ")
-              : Number.isFinite(confidence)
-                ? `Confidence: ${Math.round(confidence * 100)}%`
-                : "";
-
+          const food = this.mapItemToFood({
+            name: raw.food_name,
+            estimated_portion: ingredients.join(", "),
+            calories: raw.estimated_calories,
+            protein_g: raw.protein_g,
+            carbs_g: raw.carbs_g,
+            fat_g: raw.fat_g,
+            analysis: raw.summary || "",
+          });
           return {
-            foods: [
-              {
-                name,
-                portion,
-                calories,
-                protein: Math.max(0, Number(raw.protein_g) || 0),
-                carbs: Math.max(0, Number(raw.carbs_g) || 0),
-                fat: Math.max(0, Number(raw.fat_g) || 0),
-                confidence: Number.isFinite(confidence) ? confidence : null,
-              },
-            ],
-            totalCalories: calories,
+            foods: [food],
+            totalCalories: food.calories,
+            mealAnalysis: {
+              meal_name: food.name,
+              total_calories: food.calories,
+              confidence: Number(raw.confidence) || 0,
+              summary: String(raw.summary || food.analysis),
+              meal_quality_score: 0,
+              overall_assessment: "",
+              fitness_recommendation: "",
+              health_insights: [],
+              improvement_suggestions: [],
+            },
           };
         }
 
         if (Array.isArray(raw.foods) && raw.foods.length > 0) {
-          const foods = raw.foods.map((f) => ({
-            name: String(f?.name || "Food").trim() || "Food",
-            portion: String(f?.portion || ""),
-            calories: Math.max(0, Number(f?.calories) || 0),
-            protein: Math.max(0, Number(f?.protein) || 0),
-            carbs: Math.max(0, Number(f?.carbs) || 0),
-            fat: Math.max(0, Number(f?.fat) || 0),
-          }));
+          const foods = raw.foods.map((f) => this.mapItemToFood(f));
           const totalCalories =
             Number(raw.totalCalories) ||
             foods.reduce((sum, f) => sum + f.calories, 0);
-          return { foods, totalCalories };
+          return {
+            foods,
+            totalCalories,
+            mealAnalysis: {
+              meal_name: "Analyzed meal",
+              total_calories: totalCalories,
+              confidence: 0,
+              summary: "",
+              meal_quality_score: 0,
+              overall_assessment: "",
+              fitness_recommendation: "",
+              health_insights: [],
+              improvement_suggestions: [],
+            },
+          };
         }
 
         return null;
@@ -2762,19 +2937,60 @@ Rules:
       document.getElementById("analyzeBtn").disabled = visible || !scanImageBase64;
     }
 
+    function renderListItems(items) {
+      if (!items?.length) return "";
+      return `<ul>${items.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
+    }
+
     function renderScanResult(result) {
       pendingResult = result;
-      const list = document.getElementById("scanResultList");
       const foods = result.foods || [];
+      const meal = result.mealAnalysis || {};
+      const confidencePct = Math.round((meal.confidence || 0) * 100);
 
-      list.innerHTML = foods
+      document.getElementById("scanResultHero").innerHTML = `
+        <h2 class="scan-result__meal-name">${escapeHtml(meal.meal_name || "Your meal")}</h2>
+        <div class="scan-result__meta">
+          <span>Quality ${escapeHtml(String(meal.meal_quality_score || "—"))}/10</span>
+          <span>Confidence ${confidencePct}%</span>
+          <span>${escapeHtml(meal.processing_level || "")}</span>
+        </div>`;
+
+      document.getElementById("scanResultSummary").textContent =
+        meal.summary || "Nutritional breakdown from your photo.";
+
+      const scores = [
+        { label: "Satiety", value: meal.satiety_score },
+        { label: "Muscle", value: meal.muscle_building_score },
+        { label: "Weight loss", value: meal.weight_loss_score },
+        { label: "Heart health", value: meal.heart_health_score },
+        { label: "Balance", value: meal.meal_balance_score },
+        { label: "Glycemic load", value: meal.glycemic_load_estimate, text: true },
+      ].filter((s) => s.text ? s.value : s.value > 0);
+
+      document.getElementById("scanResultScores").innerHTML = scores
+        .map(
+          (s) => `
+        <div class="scan-score-chip">
+          <span>${escapeHtml(s.label)}</span>
+          <strong>${escapeHtml(String(s.value))}${s.text ? "" : "/10"}</strong>
+        </div>`
+        )
+        .join("");
+
+      document.getElementById("scanResultList").innerHTML = foods
         .map(
           (f) => `
         <li class="scan-result__item">
           <p class="scan-result__item-name">${escapeHtml(f.name)}</p>
-          <p class="scan-result__item-portion">${escapeHtml(f.portion || "")}</p>
-          <p class="scan-result__item-macros">P ${Math.round(f.protein)}g · C ${Math.round(f.carbs)}g · F ${Math.round(f.fat)}g</p>
+          <p class="scan-result__item-portion">Portion: ${escapeHtml(f.portion || "—")}</p>
+          <p class="scan-result__item-macros">P ${Math.round(f.protein)}g · C ${Math.round(f.carbs)}g · F ${Math.round(f.fat)}g · Fiber ${Math.round(f.fiber || 0)}g</p>
           <p class="scan-result__item-cal">${Math.round(f.calories)} kcal</p>
+          ${f.analysis ? `<p class="scan-result__item-analysis">${escapeHtml(f.analysis)}</p>` : ""}
+          <div class="scan-result__item-tags">
+            ${f.benefits?.length ? `<div><span class="scan-result__section-title">Benefits</span>${renderListItems(f.benefits)}</div>` : ""}
+            ${f.concerns?.length ? `<div><span class="scan-result__section-title">Concerns</span>${renderListItems(f.concerns)}</div>` : ""}
+          </div>
         </li>`
         )
         .join("");
@@ -2783,6 +2999,16 @@ Rules:
         result.totalCalories ??
         foods.reduce((sum, f) => sum + (Number(f.calories) || 0), 0);
       document.getElementById("scanTotalCal").textContent = `${Math.round(total)} kcal`;
+
+      document.getElementById("scanResultFooter").innerHTML = `
+        ${meal.overall_assessment ? `<div class="scan-result__block"><p class="scan-result__section-title">Overall assessment</p><p>${escapeHtml(meal.overall_assessment)}</p></div>` : ""}
+        ${meal.fitness_recommendation ? `<div class="scan-result__block"><p class="scan-result__section-title">Fitness recommendation</p><p>${escapeHtml(meal.fitness_recommendation)}</p></div>` : ""}
+        ${meal.vitamin_analysis ? `<div class="scan-result__block"><p class="scan-result__section-title">Vitamins</p><p>${escapeHtml(meal.vitamin_analysis)}</p></div>` : ""}
+        ${meal.mineral_analysis ? `<div class="scan-result__block"><p class="scan-result__section-title">Minerals</p><p>${escapeHtml(meal.mineral_analysis)}</p></div>` : ""}
+        ${meal.micronutrient_highlights?.length ? `<div class="scan-result__block"><p class="scan-result__section-title">Micronutrient highlights</p>${renderListItems(meal.micronutrient_highlights)}</div>` : ""}
+        ${meal.health_insights?.length ? `<div class="scan-result__block"><p class="scan-result__section-title">Health insights</p><ul class="scan-result__insights">${meal.health_insights.map((h) => `<li>${escapeHtml(h)}</li>`).join("")}</ul></div>` : ""}
+        ${meal.improvement_suggestions?.length ? `<div class="scan-result__block"><p class="scan-result__section-title">Suggestions</p><ul class="scan-result__insights">${meal.improvement_suggestions.map((h) => `<li>${escapeHtml(h)}</li>`).join("")}</ul></div>` : ""}`;
+
       document.getElementById("scanResult").classList.add("is-visible");
     }
 
@@ -2797,6 +3023,10 @@ Rules:
       document.getElementById("analyzeBtn").disabled = true;
       document.getElementById("scanResult").classList.remove("is-visible");
       document.getElementById("scanResultList").innerHTML = "";
+      document.getElementById("scanResultHero").innerHTML = "";
+      document.getElementById("scanResultSummary").textContent = "";
+      document.getElementById("scanResultScores").innerHTML = "";
+      document.getElementById("scanResultFooter").innerHTML = "";
       hideScanError();
       setScanLoading(false);
     }
