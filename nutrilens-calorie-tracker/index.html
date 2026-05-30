@@ -1396,7 +1396,12 @@
       MAX_RETRIES: 3,
       BACKOFF_BASE_MS: 1000,
       TEMPERATURE: 0.1,
-      MAX_OUTPUT_TOKENS: 1024,
+      /** Default output budget — nutrition JSON needs only ~200 tokens. */
+      MAX_OUTPUT_TOKENS: 2048,
+      /** Retry ceiling when MAX_TOKENS truncation occurs. */
+      MAX_OUTPUT_TOKENS_RETRY: 8192,
+      /** Disable internal "thinking" so tokens go to the JSON answer (fixes thoughtsTokenCount: 980). */
+      THINKING_BUDGET: 0,
       DEBUG_KEY: "nutriLensGeminiDebug",
     };
 
@@ -1453,6 +1458,7 @@ Rules:
       NETWORK_ERROR: "Network Error",
       SAFETY_FILTER: "Safety Filter Triggered",
       INVALID_AI_RESPONSE: "Invalid AI Response",
+      RESPONSE_TRUNCATED: "Response Truncated",
       NO_IMAGE: "No Image Selected",
       NO_API_KEY: "API Key Required",
     };
@@ -1585,10 +1591,18 @@ Rules:
         return `${url}?key=${encodeURIComponent(apiKey)}`;
       },
 
-      buildRequestBody(imageBase64, mimeType, useStructuredOutput = true) {
+      buildRequestBody(
+        imageBase64,
+        mimeType,
+        useStructuredOutput = true,
+        maxOutputTokens = GeminiConfig.MAX_OUTPUT_TOKENS
+      ) {
         const generationConfig = {
           temperature: GeminiConfig.TEMPERATURE,
-          maxOutputTokens: GeminiConfig.MAX_OUTPUT_TOKENS,
+          maxOutputTokens,
+          thinkingConfig: {
+            thinkingBudget: GeminiConfig.THINKING_BUDGET,
+          },
         };
 
         if (useStructuredOutput) {
@@ -1623,10 +1637,11 @@ Rules:
         if (reason === "SAFETY" || reason === "BLOCKLIST" || reason === "PROHIBITED_CONTENT") {
           return GeminiErrorType.SAFETY_FILTER;
         }
-        if (reason === "MAX_TOKENS") {
-          return GeminiErrorType.INVALID_AI_RESPONSE;
-        }
         return null;
+      },
+
+      isMaxTokensTruncation(finishReason) {
+        return (finishReason || "").toUpperCase() === "MAX_TOKENS";
       },
 
       extractTextFromResponse(data) {
@@ -1826,12 +1841,14 @@ Rules:
         imageBase64,
         mimeType,
         attemptIndex,
-        useStructuredOutput
+        useStructuredOutput,
+        maxOutputTokens
       ) {
         const requestBody = this.buildRequestBody(
           imageBase64,
           mimeType,
-          useStructuredOutput
+          useStructuredOutput,
+          maxOutputTokens
         );
         const url = this.buildEndpoint(apiKey);
 
@@ -1839,6 +1856,8 @@ Rules:
           url: url.replace(apiKey, "***"),
           attempt: attemptIndex + 1,
           structuredOutput: useStructuredOutput,
+          maxOutputTokens,
+          thinkingBudget: GeminiConfig.THINKING_BUDGET,
           mimeType,
         });
 
@@ -1883,6 +1902,7 @@ Rules:
           detail: "Analysis failed",
         };
         let useStructuredOutput = true;
+        let maxOutputTokens = GeminiConfig.MAX_OUTPUT_TOKENS;
 
         for (let attempt = 0; attempt < GeminiConfig.MAX_RETRIES; attempt++) {
           try {
@@ -1892,7 +1912,8 @@ Rules:
                 imageBase64,
                 mimeType,
                 attempt,
-                useStructuredOutput
+                useStructuredOutput,
+                maxOutputTokens
               );
 
             if (bodyParseError || !data) {
@@ -1954,6 +1975,50 @@ Rules:
 
             const { text, finishReason, blockReason } =
               this.extractTextFromResponse(data);
+            const usage = data.usageMetadata;
+
+            if (this.isMaxTokensTruncation(finishReason)) {
+              console.warn("[NutriLens] Root cause: MAX_TOKENS — JSON output truncated.", {
+                finishReason,
+                usageMetadata: usage,
+                thoughtsTokenCount: usage?.thoughtsTokenCount,
+                candidatesTokenCount: usage?.candidatesTokenCount,
+                maxOutputTokens,
+                modelVersion: data.modelVersion,
+              });
+
+              maxOutputTokens = Math.min(
+                maxOutputTokens * 2,
+                GeminiConfig.MAX_OUTPUT_TOKENS_RETRY
+              );
+
+              lastResult = {
+                ok: false,
+                errorType: GeminiErrorType.RESPONSE_TRUNCATED,
+                detail:
+                  `Gemini hit the output token limit (${usage?.candidatesTokenCount ?? "?"} tokens written, ` +
+                  `${usage?.thoughtsTokenCount ?? 0} used for internal thinking). ` +
+                  `Retrying with maxOutputTokens=${maxOutputTokens} and thinkingBudget=0.`,
+                rawBody,
+                apiPayload: data,
+                modelText: text,
+              };
+
+              if (attempt < GeminiConfig.MAX_RETRIES - 1) {
+                await this.sleep(GeminiConfig.BACKOFF_BASE_MS * 2 ** attempt);
+                continue;
+              }
+
+              return {
+                ok: false,
+                errorType: GeminiErrorType.RESPONSE_TRUNCATED,
+                detail:
+                  "Gemini cut off the response before finishing the JSON. Try again or use a simpler photo.",
+                rawBody,
+                apiPayload: data,
+              };
+            }
+
             const safetyError = this.classifyFinishReason(
               finishReason,
               blockReason || data?.promptFeedback?.blockReason
@@ -2002,13 +2067,27 @@ Rules:
             this.debug("Parse attempts", parseResult.attempts);
 
             if (!parseResult.ok) {
+              const likelyTruncated =
+                !text.trim().endsWith("}") || this.isMaxTokensTruncation(finishReason);
               lastResult = {
                 ok: false,
-                errorType: GeminiErrorType.INVALID_AI_RESPONSE,
-                detail: `Could not parse model output as JSON: ${parseResult.error}`,
+                errorType: likelyTruncated
+                  ? GeminiErrorType.RESPONSE_TRUNCATED
+                  : GeminiErrorType.INVALID_AI_RESPONSE,
+                detail: likelyTruncated
+                  ? "Incomplete JSON from Gemini (response may have been truncated)."
+                  : `Could not parse model output as JSON: ${parseResult.error}`,
                 rawBody,
                 modelText: text,
               };
+              if (likelyTruncated && attempt < GeminiConfig.MAX_RETRIES - 1) {
+                maxOutputTokens = Math.min(
+                  maxOutputTokens * 2,
+                  GeminiConfig.MAX_OUTPUT_TOKENS_RETRY
+                );
+                await this.sleep(GeminiConfig.BACKOFF_BASE_MS * 2 ** attempt);
+                continue;
+              }
               if (attempt < GeminiConfig.MAX_RETRIES - 1) {
                 await this.sleep(GeminiConfig.BACKOFF_BASE_MS * 2 ** attempt);
                 continue;
