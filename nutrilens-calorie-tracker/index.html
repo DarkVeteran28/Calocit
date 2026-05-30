@@ -24,6 +24,8 @@
       --color-protein: #60a5fa;
       --color-carbs: #fbbf24;
       --color-fat: #fb7185;
+      --color-amber: #fbbf24;
+      --color-amber-dim: rgba(251, 191, 36, 0.15);
       --ring-circumference: 427.3;
       --font-display: "Syne", system-ui, sans-serif;
       --font-body: "DM Sans", system-ui, sans-serif;
@@ -458,11 +460,161 @@
       margin-bottom: var(--space-md);
     }
 
-    /* Chart */
-    .chart-wrap {
+    /* Weekly page */
+    #page-weekly {
+      gap: var(--space-md);
+    }
+
+    .weekly-streak {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, var(--color-surface) 55%);
+      border-color: rgba(251, 191, 36, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+      padding: var(--space-lg) var(--space-md);
+    }
+
+    .weekly-streak__left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+
+    .weekly-streak__flame {
+      font-size: 2.25rem;
+      line-height: 1;
+      animation: flamePulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes flamePulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.12);
+        opacity: 0.88;
+      }
+    }
+
+    .weekly-streak__number {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 2.25rem;
+      line-height: 1;
+      color: var(--color-amber);
+    }
+
+    .weekly-streak__label {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+
+    .weekly-streak__best {
+      font-size: 0.75rem;
+      color: var(--color-text-subtle);
+      margin-top: var(--space-xs);
+    }
+
+    .weekly-streak__today {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .weekly-streak__today-pct {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.5rem;
+      color: var(--color-amber);
+      line-height: 1;
+    }
+
+    .weekly-streak__today-label {
+      font-size: 0.6875rem;
+      color: var(--color-text-subtle);
+      margin-top: var(--space-xs);
+    }
+
+    .weekly-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-sm);
+    }
+
+    .weekly-stat {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+    }
+
+    .weekly-stat__label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-subtle);
+      margin-bottom: var(--space-xs);
+    }
+
+    .weekly-stat__value {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.375rem;
+      color: var(--color-text);
+    }
+
+    .weekly-stat__unit {
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--color-text-muted);
+    }
+
+    .weekly-chart-wrap {
       position: relative;
-      height: 180px;
+      height: 170px;
       width: 100%;
+    }
+
+    .weekly-donut-wrap {
+      position: relative;
+      height: 130px;
+      width: 100%;
+    }
+
+    .macro-legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--space-md) var(--space-lg);
+      margin-bottom: var(--space-md);
+    }
+
+    .macro-legend__item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+    }
+
+    .macro-legend__swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .macro-legend__swatch--protein { background: var(--color-protein); }
+    .macro-legend__swatch--carbs { background: var(--color-carbs); }
+    .macro-legend__swatch--fat { background: var(--color-fat); }
+
+    .macro-legend__pct {
+      font-weight: 600;
+      color: var(--color-text);
     }
 
     /* Scan page */
@@ -952,10 +1104,50 @@
     </div>
 
     <div id="page-weekly" class="page" role="tabpanel">
-      <section class="card" aria-label="Weekly trend">
-        <h2 class="card-title">This week</h2>
-        <div class="chart-wrap">
-          <canvas id="weekChart"></canvas>
+      <section class="card weekly-streak" aria-label="Streak">
+        <div class="weekly-streak__left">
+          <span class="weekly-streak__flame" aria-hidden="true">🔥</span>
+          <div>
+            <div class="weekly-streak__number" id="weeklyStreakNum">0</div>
+            <div class="weekly-streak__label">Day streak</div>
+            <div class="weekly-streak__best" id="weeklyBestStreak">Personal best: 0 days</div>
+          </div>
+        </div>
+        <div class="weekly-streak__today">
+          <div class="weekly-streak__today-pct" id="weeklyTodayPct">0%</div>
+          <div class="weekly-streak__today-label">of today's goal</div>
+        </div>
+      </section>
+
+      <div class="weekly-stats" aria-label="Weekly statistics">
+        <div class="weekly-stat">
+          <div class="weekly-stat__label">Daily Avg</div>
+          <div class="weekly-stat__value">
+            <span id="weeklyDailyAvg">0</span>
+            <span class="weekly-stat__unit"> kcal</span>
+          </div>
+        </div>
+        <div class="weekly-stat">
+          <div class="weekly-stat__label">This Week</div>
+          <div class="weekly-stat__value">
+            <span id="weeklyTotal">0</span>
+            <span class="weekly-stat__unit"> kcal</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="card" aria-label="7-day calorie chart">
+        <h2 class="card-title">7-Day Calories</h2>
+        <div class="weekly-chart-wrap">
+          <canvas id="weekBarChart"></canvas>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Today's macro breakdown">
+        <h2 class="card-title">Today's Macros</h2>
+        <div class="macro-legend" id="macroLegend"></div>
+        <div class="weekly-donut-wrap">
+          <canvas id="macroDonutChart"></canvas>
         </div>
       </section>
     </div>
@@ -1085,7 +1277,8 @@ Rules:
     }
 
     let state = loadState();
-    let weekChart = null;
+    let weekChartInst = null;
+    let macroChartInst = null;
 
     function todayDiary() {
       const key = diaryKey();
@@ -1195,7 +1388,9 @@ Rules:
       updateCalorieRing(totals.calories, goal);
       updateMacroBars(totals);
       renderFoodList();
-      refreshWeekChart();
+      if (document.getElementById("page-weekly").classList.contains("active")) {
+        renderWeekly();
+      }
     }
 
     function switchPage(name) {
@@ -1215,91 +1410,211 @@ Rules:
         tab.classList.toggle("active", isActive);
         tab.setAttribute("aria-selected", isActive ? "true" : "false");
       });
-    }
 
-    function getWeekLabels() {
-      const labels = [];
-      const d = new Date();
-      for (let i = 6; i >= 0; i--) {
-        const day = new Date(d);
-        day.setDate(d.getDate() - i);
-        labels.push(
-          day.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2)
-        );
+      if (name === "weekly") {
+        renderWeekly();
       }
-      return labels;
     }
 
-    function getWeekCalories() {
-      const values = [];
-      const d = new Date();
+    function getLast7Days() {
+      const days = [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
       for (let i = 6; i >= 0; i--) {
-        const day = new Date(d);
-        day.setDate(d.getDate() - i);
+        const day = new Date(today);
+        day.setDate(today.getDate() - i);
         const key = diaryKey(day);
+        let calories = 0;
         if (state.diary[key]) {
-          values.push(state.diary[key].totals.calories);
+          calories = state.diary[key].totals.calories;
         } else if (state.weekHistory[key] !== undefined) {
-          values.push(state.weekHistory[key]);
-        } else {
-          values.push(0);
+          calories = state.weekHistory[key];
         }
+        const isToday = day.toDateString() === today.toDateString();
+        days.push({
+          date: day,
+          key,
+          calories,
+          label: isToday
+            ? "Today"
+            : day.toLocaleDateString(undefined, { weekday: "short" }),
+        });
       }
-      return values;
+      return days;
     }
 
-    function chartColors() {
-      return {
-        accent: "#4ade80",
-        accentDim: "rgba(74, 222, 128, 0.2)",
-        grid: "#262626",
-        text: "#737373",
-      };
+    function destroyWeeklyCharts() {
+      if (weekChartInst) {
+        weekChartInst.destroy();
+        weekChartInst = null;
+      }
+      if (macroChartInst) {
+        macroChartInst.destroy();
+        macroChartInst = null;
+      }
     }
 
-    function initWeekChart() {
-      const ctx = document.getElementById("weekChart");
-      const c = chartColors();
+    function renderWeekly() {
+      if (typeof Chart === "undefined") return;
 
-      weekChart = new Chart(ctx, {
+      const goal = state.goals.calories;
+      const days = getLast7Days();
+      const calData = days.map((d) => d.calories);
+      const labels = days.map((d) => d.label);
+
+      const daysWithData = calData.filter((c) => c > 0);
+      const dailyAvg =
+        daysWithData.length > 0
+          ? Math.round(
+              daysWithData.reduce((a, b) => a + b, 0) / daysWithData.length
+            )
+          : 0;
+      const weekTotal = Math.round(calData.reduce((a, b) => a + b, 0));
+
+      const diary = todayDiary();
+      const todayCal = diary.totals.calories;
+      const todayPct =
+        goal > 0 ? Math.min(Math.round((todayCal / goal) * 100), 999) : 0;
+
+      document.getElementById("weeklyStreakNum").textContent = state.streak ?? 0;
+      document.getElementById("weeklyBestStreak").textContent =
+        `Personal best: ${state.bestStreak ?? 0} days`;
+      document.getElementById("weeklyTodayPct").textContent = `${todayPct}%`;
+      document.getElementById("weeklyDailyAvg").textContent = dailyAvg;
+      document.getElementById("weeklyTotal").textContent = weekTotal;
+
+      const barColors = calData.map((c) =>
+        c >= goal * 0.9
+          ? "rgba(74, 222, 128, 0.8)"
+          : "rgba(74, 222, 128, 0.25)"
+      );
+
+      destroyWeeklyCharts();
+
+      const barCtx = document.getElementById("weekBarChart");
+      weekChartInst = new Chart(barCtx, {
         type: "bar",
         data: {
-          labels: getWeekLabels(),
+          labels,
           datasets: [
             {
+              type: "bar",
               label: "Calories",
-              data: getWeekCalories(),
-              backgroundColor: c.accentDim,
-              borderColor: c.accent,
-              borderWidth: 1,
+              data: calData,
+              backgroundColor: barColors,
               borderRadius: 6,
+              borderSkipped: false,
+              order: 2,
+            },
+            {
+              type: "line",
+              label: "Goal",
+              data: Array(7).fill(goal),
+              borderColor: "#fbbf24",
+              borderWidth: 2,
+              borderDash: [6, 4],
+              pointRadius: 0,
+              pointHoverRadius: 0,
+              fill: false,
+              tension: 0,
+              order: 1,
             },
           ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  if (ctx.dataset.type === "line") {
+                    return `Goal: ${goal} kcal`;
+                  }
+                  return `${Math.round(ctx.parsed.y)} kcal`;
+                },
+              },
+            },
+          },
           scales: {
             x: {
               grid: { display: false },
-              ticks: { color: c.text, font: { family: "'DM Sans'" } },
+              ticks: { color: "#a3a3a3", font: { family: "'DM Sans'", size: 11 } },
             },
             y: {
               beginAtZero: true,
-              grid: { color: c.grid },
-              ticks: { color: c.text, font: { family: "'DM Sans'" } },
+              grid: { color: "#262626" },
+              ticks: { color: "#a3a3a3", font: { family: "'DM Sans'", size: 11 } },
             },
           },
         },
       });
-    }
 
-    function refreshWeekChart() {
-      if (!weekChart) return;
-      weekChart.data.labels = getWeekLabels();
-      weekChart.data.datasets[0].data = getWeekCalories();
-      weekChart.update();
+      const totals = diary.totals;
+      const proteinCal = totals.protein * 4;
+      const carbsCal = totals.carbs * 4;
+      const fatCal = totals.fat * 9;
+      const macroSum = proteinCal + carbsCal + fatCal;
+
+      const pPct = macroSum > 0 ? Math.round((proteinCal / macroSum) * 100) : 0;
+      const cPct = macroSum > 0 ? Math.round((carbsCal / macroSum) * 100) : 0;
+      const fPct = macroSum > 0 ? Math.round((fatCal / macroSum) * 100) : 0;
+
+      document.getElementById("macroLegend").innerHTML = `
+        <div class="macro-legend__item">
+          <span class="macro-legend__swatch macro-legend__swatch--protein"></span>
+          <span>Protein <span class="macro-legend__pct">${pPct}%</span></span>
+        </div>
+        <div class="macro-legend__item">
+          <span class="macro-legend__swatch macro-legend__swatch--carbs"></span>
+          <span>Carbs <span class="macro-legend__pct">${cPct}%</span></span>
+        </div>
+        <div class="macro-legend__item">
+          <span class="macro-legend__swatch macro-legend__swatch--fat"></span>
+          <span>Fat <span class="macro-legend__pct">${fPct}%</span></span>
+        </div>`;
+
+      const donutCtx = document.getElementById("macroDonutChart");
+      macroChartInst = new Chart(donutCtx, {
+        type: "doughnut",
+        data: {
+          labels: ["Protein", "Carbs", "Fat"],
+          datasets: [
+            {
+              data:
+                macroSum > 0
+                  ? [proteinCal, carbsCal, fatCal]
+                  : [1, 1, 1],
+              backgroundColor:
+                macroSum > 0
+                  ? ["#60a5fa", "#fbbf24", "#fb7185"]
+                  : ["#262626", "#262626", "#262626"],
+              borderWidth: 0,
+              hoverOffset: 4,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "68%",
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  if (macroSum === 0) return "No data yet";
+                  const pct = Math.round(
+                    (ctx.parsed / macroSum) * 100
+                  );
+                  return `${ctx.label}: ${pct}% (${Math.round(ctx.parsed)} kcal)`;
+                },
+              },
+            },
+          },
+        },
+      });
     }
 
     function foodEmoji(name) {
@@ -1565,9 +1880,6 @@ Rules:
     document.addEventListener("DOMContentLoaded", () => {
       todayDiary();
       initScanPage();
-      if (typeof Chart !== "undefined") {
-        initWeekChart();
-      }
       updateUI();
       switchPage("home");
     });
