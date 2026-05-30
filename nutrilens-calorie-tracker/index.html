@@ -465,6 +465,339 @@
       width: 100%;
     }
 
+    /* Scan page */
+    #page-scan {
+      gap: var(--space-md);
+    }
+
+    .scan-upload {
+      position: relative;
+      min-height: 200px;
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      padding: var(--space-lg) var(--space-md);
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color 0.15s ease;
+    }
+
+    .scan-upload:hover {
+      border-color: var(--color-accent);
+    }
+
+    .scan-upload.has-image {
+      padding: 0;
+      border-style: solid;
+    }
+
+    .scan-upload__input {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .scan-upload__placeholder {
+      text-align: center;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .scan-upload__icon {
+      font-size: 2.5rem;
+      display: block;
+      margin-bottom: var(--space-sm);
+    }
+
+    .scan-upload__text {
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .scan-upload__hint {
+      font-size: 0.8125rem;
+      color: var(--color-text-subtle);
+      margin-top: var(--space-xs);
+    }
+
+    .scan-upload__preview {
+      display: none;
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+    }
+
+    .scan-upload.has-image .scan-upload__placeholder {
+      display: none;
+    }
+
+    .scan-upload.has-image .scan-upload__preview {
+      display: block;
+    }
+
+    .scan-api {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .scan-api__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+    }
+
+    .scan-api__label {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      color: var(--color-text);
+    }
+
+    .scan-badge {
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--color-accent-dim);
+      color: var(--color-accent);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+      flex-shrink: 0;
+    }
+
+    .scan-api__input {
+      width: 100%;
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-surface-elevated);
+      color: var(--color-text);
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+    }
+
+    .scan-api__input:focus {
+      outline: none;
+      border-color: var(--color-accent);
+    }
+
+    .scan-api__note {
+      font-size: 0.75rem;
+      color: var(--color-text-subtle);
+      line-height: 1.4;
+    }
+
+    .scan-api__note a {
+      color: var(--color-accent);
+      text-decoration: none;
+    }
+
+    .scan-analyze {
+      width: 100%;
+      padding: var(--space-md);
+      border: none;
+      border-radius: var(--radius-md);
+      background: var(--color-accent);
+      color: var(--color-bg);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.9375rem;
+      cursor: pointer;
+      transition: background 0.15s ease, opacity 0.15s ease;
+    }
+
+    .scan-analyze:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .scan-analyze:not(:disabled):hover {
+      background: var(--color-accent-hover);
+    }
+
+    .scan-loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-xl);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+    }
+
+    .scan-loading.is-visible {
+      display: flex;
+    }
+
+    .scan-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--color-border);
+      border-top-color: var(--color-accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .scan-loading__text {
+      font-size: 0.875rem;
+      color: var(--color-text-muted);
+    }
+
+    .scan-result {
+      display: none;
+      flex-direction: column;
+      gap: var(--space-md);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-md);
+    }
+
+    .scan-result.is-visible {
+      display: flex;
+    }
+
+    .scan-result__title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--color-text);
+    }
+
+    .scan-result__list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .scan-result__item {
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-surface-elevated);
+      border-radius: var(--radius-md);
+    }
+
+    .scan-result__item-name {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      margin-bottom: 2px;
+    }
+
+    .scan-result__item-portion {
+      font-size: 0.75rem;
+      color: var(--color-text-subtle);
+      margin-bottom: var(--space-xs);
+    }
+
+    .scan-result__item-macros {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+    }
+
+    .scan-result__item-cal {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--color-accent);
+      margin-top: var(--space-xs);
+      font-size: 0.875rem;
+    }
+
+    .scan-result__total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: var(--space-sm);
+      border-top: 1px solid var(--color-border);
+      font-weight: 600;
+    }
+
+    .scan-result__total-value {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.125rem;
+      color: var(--color-accent);
+    }
+
+    .scan-add-btn {
+      width: 100%;
+      padding: var(--space-md);
+      border: none;
+      border-radius: var(--radius-md);
+      background: var(--color-surface-elevated);
+      border: 1px solid var(--color-accent);
+      color: var(--color-accent);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.9375rem;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .scan-add-btn:hover {
+      background: var(--color-accent);
+      color: var(--color-bg);
+    }
+
+    .scan-error {
+      display: none;
+      padding: var(--space-md);
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      border-radius: var(--radius-md);
+      color: var(--color-danger);
+      font-size: 0.875rem;
+    }
+
+    .scan-error.is-visible {
+      display: block;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0));
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      max-width: calc(var(--max-width) - var(--space-md) * 2);
+      width: calc(100% - var(--space-md) * 2);
+      padding: var(--space-md);
+      background: var(--color-accent);
+      color: var(--color-bg);
+      font-weight: 600;
+      font-size: 0.875rem;
+      text-align: center;
+      border-radius: var(--radius-md);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    .toast.is-visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
   </style>
 </head>
 <body>
@@ -554,10 +887,68 @@
     </div>
 
     <div id="page-scan" class="page" role="tabpanel">
-      <div class="page-placeholder">
-        <p class="page-placeholder__title">Scan</p>
-        <p>Point your camera at a meal to estimate calories.</p>
+      <label class="scan-upload" id="scanUploadZone">
+        <input
+          type="file"
+          class="scan-upload__input"
+          id="scanFileInput"
+          accept="image/*"
+        />
+        <div class="scan-upload__placeholder" id="scanPlaceholder">
+          <span class="scan-upload__icon" aria-hidden="true">📷</span>
+          <p class="scan-upload__text">Tap to select a food photo</p>
+          <p class="scan-upload__hint">JPG, PNG, or HEIC</p>
+        </div>
+        <img class="scan-upload__preview" id="scanPreview" alt="Food preview" />
+      </label>
+
+      <section class="scan-api" aria-label="API key settings">
+        <div class="scan-api__head">
+          <span class="scan-api__label">Google Gemini</span>
+          <span class="scan-badge">FREE</span>
+        </div>
+        <input
+          type="password"
+          class="scan-api__input"
+          id="geminiApiKey"
+          placeholder="AIzaSy..."
+          autocomplete="off"
+        />
+        <p class="scan-api__note">
+          Get free key at
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com → Get API key</a>.
+          No credit card required, 1500 requests/day.
+        </p>
+      </section>
+
+      <p class="scan-error" id="scanError" role="alert"></p>
+
+      <button
+        type="button"
+        class="scan-analyze"
+        id="analyzeBtn"
+        disabled
+        onclick="analyzeFood()"
+      >
+        Analyze with Gemini Vision (Free)
+      </button>
+
+      <div class="scan-loading" id="scanLoading" aria-live="polite">
+        <div class="scan-spinner" aria-hidden="true"></div>
+        <p class="scan-loading__text">Gemini is analyzing your meal…</p>
       </div>
+
+      <section class="scan-result" id="scanResult" aria-label="Analysis results">
+        <h2 class="scan-result__title">Detected foods</h2>
+        <ul class="scan-result__list" id="scanResultList"></ul>
+        <div class="scan-result__total">
+          <span>Total calories</span>
+          <span class="scan-result__total-value" id="scanTotalCal">0 kcal</span>
+        </div>
+        <button type="button" class="scan-add-btn" onclick="addToDiary()">
+          Add to Today's Diary
+        </button>
+      </section>
     </div>
 
     <div id="page-weekly" class="page" role="tabpanel">
@@ -578,9 +969,30 @@
 
   </div>
 
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
   <script>
     const STORAGE_KEY = "nutriLensG";
+    const API_KEY_STORAGE = "nutriLensGeminiKey";
     const RING_CIRCUMFERENCE = 427.3;
+    const GEMINI_ENDPOINT =
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+
+    const GEMINI_PROMPT = `You are an expert nutritionist. Analyze this food image carefully and respond ONLY with a valid JSON object — no markdown, no extra text, no explanation.
+
+Return exactly this structure:
+{"foods":[{"name":"Specific Food Name","portion":"estimated serving size","calories":0,"protein":0,"carbs":0,"fat":0}],"totalCalories":0}
+
+Rules:
+- Be specific about food names (e.g. 'Grilled Chicken Breast' not just 'chicken')
+- Estimate realistic portion sizes
+- All macros in grams, calories as kcal number
+- totalCalories must equal the sum of all items
+- If you see multiple foods, list each separately`;
+
+    let scanImageBase64 = null;
+    let scanMimeType = "image/jpeg";
+    let pendingResult = null;
 
     const defaultState = () => ({
       goals: { calories: 2000, protein: 150, carbs: 250, fat: 65 },
@@ -890,12 +1302,269 @@
       weekChart.update();
     }
 
+    function foodEmoji(name) {
+      const n = (name || "").toLowerCase();
+      if (/salad|lettuce|greens|vegetable/.test(n)) return "🥗";
+      if (/chicken|turkey|meat|steak|beef|pork/.test(n)) return "🍗";
+      if (/fish|salmon|tuna|shrimp|seafood/.test(n)) return "🐟";
+      if (/pizza/.test(n)) return "🍕";
+      if (/burger|sandwich/.test(n)) return "🍔";
+      if (/pasta|noodle|spaghetti/.test(n)) return "🍝";
+      if (/rice|bowl/.test(n)) return "🍚";
+      if (/egg|breakfast/.test(n)) return "🍳";
+      if (/fruit|apple|banana|berry/.test(n)) return "🍎";
+      if (/coffee|latte|drink|smoothie/.test(n)) return "☕";
+      if (/dessert|cake|cookie|chocolate|ice cream/.test(n)) return "🍰";
+      return "🍽️";
+    }
+
+    function updateStreak() {
+      const today = diaryKey();
+      if (state.lastLogDate === today) return;
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayKey = diaryKey(yesterday);
+
+      if (state.lastLogDate === yesterdayKey) {
+        state.streak = (state.streak || 0) + 1;
+      } else {
+        state.streak = 1;
+      }
+      state.bestStreak = Math.max(state.bestStreak || 0, state.streak);
+      state.lastLogDate = today;
+    }
+
+    function addNutrition(food) {
+      const diary = todayDiary();
+      diary.items.push({
+        id: crypto.randomUUID(),
+        emoji: foodEmoji(food.name),
+        name: food.name,
+        calories: Number(food.calories) || 0,
+        protein: Number(food.protein) || 0,
+        carbs: Number(food.carbs) || 0,
+        fat: Number(food.fat) || 0,
+        time: new Date().toLocaleTimeString(undefined, {
+          hour: "numeric",
+          minute: "2-digit",
+        }),
+      });
+      recalcDiaryTotals(diary);
+    }
+
+    function parseGeminiJson(text) {
+      let cleaned = String(text).trim();
+      cleaned = cleaned
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/g, "");
+      const start = cleaned.indexOf("{");
+      const end = cleaned.lastIndexOf("}");
+      if (start >= 0 && end > start) {
+        cleaned = cleaned.slice(start, end + 1);
+      }
+      return JSON.parse(cleaned);
+    }
+
+    function showScanError(message) {
+      const el = document.getElementById("scanError");
+      el.textContent = message;
+      el.classList.add("is-visible");
+    }
+
+    function hideScanError() {
+      document.getElementById("scanError").classList.remove("is-visible");
+    }
+
+    function setScanLoading(visible) {
+      document.getElementById("scanLoading").classList.toggle("is-visible", visible);
+      document.getElementById("analyzeBtn").disabled = visible || !scanImageBase64;
+    }
+
+    function renderScanResult(result) {
+      pendingResult = result;
+      const list = document.getElementById("scanResultList");
+      const foods = result.foods || [];
+
+      list.innerHTML = foods
+        .map(
+          (f) => `
+        <li class="scan-result__item">
+          <p class="scan-result__item-name">${escapeHtml(f.name)}</p>
+          <p class="scan-result__item-portion">${escapeHtml(f.portion || "")}</p>
+          <p class="scan-result__item-macros">P ${Math.round(f.protein)}g · C ${Math.round(f.carbs)}g · F ${Math.round(f.fat)}g</p>
+          <p class="scan-result__item-cal">${Math.round(f.calories)} kcal</p>
+        </li>`
+        )
+        .join("");
+
+      const total =
+        result.totalCalories ??
+        foods.reduce((sum, f) => sum + (Number(f.calories) || 0), 0);
+      document.getElementById("scanTotalCal").textContent = `${Math.round(total)} kcal`;
+      document.getElementById("scanResult").classList.add("is-visible");
+    }
+
+    function clearScanForm() {
+      scanImageBase64 = null;
+      scanMimeType = "image/jpeg";
+      pendingResult = null;
+
+      document.getElementById("scanFileInput").value = "";
+      document.getElementById("scanPreview").src = "";
+      document.getElementById("scanUploadZone").classList.remove("has-image");
+      document.getElementById("analyzeBtn").disabled = true;
+      document.getElementById("scanResult").classList.remove("is-visible");
+      document.getElementById("scanResultList").innerHTML = "";
+      hideScanError();
+      setScanLoading(false);
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("is-visible");
+      setTimeout(() => toast.classList.remove("is-visible"), 2500);
+    }
+
+    function getGeminiApiKey() {
+      return document.getElementById("geminiApiKey").value.trim();
+    }
+
+    async function analyzeFood() {
+      hideScanError();
+      document.getElementById("scanResult").classList.remove("is-visible");
+
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        showScanError("Please enter your Gemini API key.");
+        return;
+      }
+      if (!scanImageBase64) {
+        showScanError("Please select a food photo first.");
+        return;
+      }
+
+      localStorage.setItem(API_KEY_STORAGE, apiKey);
+      setScanLoading(true);
+
+      try {
+        const url = `${GEMINI_ENDPOINT}?key=${encodeURIComponent(apiKey)}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    inlineData: {
+                      mimeType: scanMimeType,
+                      data: scanImageBase64,
+                    },
+                  },
+                  { text: GEMINI_PROMPT },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 1024,
+            },
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          const msg =
+            data?.error?.message || `API error (${response.status})`;
+          throw new Error(msg);
+        }
+
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) {
+          throw new Error("No analysis returned. Try another photo.");
+        }
+
+        const parsed = parseGeminiJson(text);
+        if (!parsed.foods || !Array.isArray(parsed.foods)) {
+          throw new Error("Invalid response format from Gemini.");
+        }
+
+        renderScanResult(parsed);
+      } catch (err) {
+        showScanError(err.message || "Analysis failed. Please try again.");
+      } finally {
+        setScanLoading(false);
+        document.getElementById("analyzeBtn").disabled = !scanImageBase64;
+      }
+    }
+
+    function addToDiary() {
+      if (!pendingResult?.foods?.length) return;
+
+      pendingResult.foods.forEach((food) => addNutrition(food));
+      updateStreak();
+
+      const today = diaryKey();
+      const diary = todayDiary();
+      state.weekHistory[today] = diary.totals.calories;
+      saveState();
+
+      showToast(`Added ${pendingResult.foods.length} item(s) to today's diary!`);
+      clearScanForm();
+      updateUI();
+
+      setTimeout(() => switchPage("home"), 900);
+    }
+
+    function initScanPage() {
+      const savedKey = localStorage.getItem(API_KEY_STORAGE);
+      if (savedKey) {
+        document.getElementById("geminiApiKey").value = savedKey;
+      }
+
+      document.getElementById("geminiApiKey").addEventListener("change", (e) => {
+        const key = e.target.value.trim();
+        if (key) localStorage.setItem(API_KEY_STORAGE, key);
+      });
+
+      document.getElementById("scanFileInput").addEventListener("change", (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        hideScanError();
+        document.getElementById("scanResult").classList.remove("is-visible");
+        pendingResult = null;
+
+        scanMimeType = file.type || "image/jpeg";
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result;
+          const base64 = String(dataUrl).split(",")[1];
+          scanImageBase64 = base64;
+
+          const preview = document.getElementById("scanPreview");
+          preview.src = dataUrl;
+          document.getElementById("scanUploadZone").classList.add("has-image");
+          document.getElementById("analyzeBtn").disabled = false;
+        };
+        reader.onerror = () => {
+          showScanError("Could not read image file.");
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
     document.querySelectorAll(".nav-tab").forEach((tab) => {
       tab.addEventListener("click", () => switchPage(tab.dataset.page));
     });
 
     document.addEventListener("DOMContentLoaded", () => {
       todayDiary();
+      initScanPage();
       if (typeof Chart !== "undefined") {
         initWeekChart();
       }
