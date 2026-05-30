@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>NutriLens — Calorie Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" defer></script>
+  <style>
+    :root {
+      --color-bg: #0a0a0a;
+      --color-surface: #111111;
+      --color-surface-elevated: #1a1a1a;
+      --color-border: #262626;
+      --color-text: #fafafa;
+      --color-text-muted: #a3a3a3;
+      --color-text-subtle: #737373;
+      --color-accent: #4ade80;
+      --color-accent-dim: rgba(74, 222, 128, 0.15);
+      --color-accent-hover: #22c55e;
+      --color-danger: #f87171;
+      --font-display: "Syne", system-ui, sans-serif;
+      --font-body: "DM Sans", system-ui, sans-serif;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --max-width: 390px;
+      --header-height: 56px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--color-text);
+      background: var(--color-bg);
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      width: 100%;
+      max-width: var(--max-width);
+      margin: 0 auto;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    /* Header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      height: var(--header-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-md);
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+      color: var(--color-text);
+    }
+
+    .logo span {
+      color: var(--color-accent);
+    }
+
+    .header-date {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+    }
+
+    /* Main */
+    main {
+      flex: 1;
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-md);
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-md);
+    }
+
+    /* Summary ring */
+    .summary {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-md);
+      text-align: center;
+    }
+
+    .calorie-ring {
+      position: relative;
+      width: 160px;
+      height: 160px;
+    }
+
+    .calorie-ring canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .calorie-ring__center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .calorie-ring__value {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 2rem;
+      line-height: 1;
+      color: var(--color-accent);
+    }
+
+    .calorie-ring__label {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      margin-top: var(--space-xs);
+    }
+
+    .macro-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-sm);
+      width: 100%;
+    }
+
+    .macro {
+      background: var(--color-surface-elevated);
+      border-radius: var(--radius-md);
+      padding: var(--space-sm) var(--space-md);
+      text-align: center;
+    }
+
+    .macro__value {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.125rem;
+      color: var(--color-text);
+    }
+
+    .macro__label {
+      font-size: 0.6875rem;
+      color: var(--color-text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* Chart */
+    .chart-wrap {
+      position: relative;
+      height: 180px;
+      width: 100%;
+    }
+
+    /* Meal list */
+    .meal-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .meal-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-surface-elevated);
+      border-radius: var(--radius-md);
+      gap: var(--space-md);
+    }
+
+    .meal-item__name {
+      font-weight: 500;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .meal-item__meta {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      flex-shrink: 0;
+    }
+
+    .meal-item__cal {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--color-accent);
+      flex-shrink: 0;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: var(--space-lg) var(--space-md);
+      color: var(--color-text-subtle);
+      font-size: 0.875rem;
+    }
+
+    /* FAB */
+    .fab {
+      position: fixed;
+      bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0));
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(var(--max-width) - var(--space-md) * 2);
+      max-width: calc(390px - 32px);
+      height: 48px;
+      border: none;
+      border-radius: var(--radius-md);
+      background: var(--color-accent);
+      color: var(--color-bg);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.9375rem;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .fab:hover,
+    .fab:focus-visible {
+      background: var(--color-accent-hover);
+      outline: none;
+    }
+
+    .fab:active {
+      transform: translateX(-50%) scale(0.98);
+    }
+
+    main {
+      padding-bottom: calc(48px + var(--space-lg) * 2 + env(safe-area-inset-bottom, 0));
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1 class="logo">Nutri<span>Lens</span></h1>
+      <time class="header-date" id="headerDate"></time>
+    </header>
+
+    <main>
+      <section class="card summary" aria-label="Daily summary">
+        <div class="calorie-ring">
+          <canvas id="ringChart" aria-hidden="true"></canvas>
+          <div class="calorie-ring__center">
+            <span class="calorie-ring__value" id="caloriesRemaining">—</span>
+            <span class="calorie-ring__label">kcal left</span>
+          </div>
+        </div>
+        <div class="macro-row">
+          <div class="macro">
+            <div class="macro__value" id="proteinTotal">0</div>
+            <div class="macro__label">Protein</div>
+          </div>
+          <div class="macro">
+            <div class="macro__value" id="carbsTotal">0</div>
+            <div class="macro__label">Carbs</div>
+          </div>
+          <div class="macro">
+            <div class="macro__value" id="fatTotal">0</div>
+            <div class="macro__label">Fat</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Weekly trend">
+        <h2 class="card-title">This week</h2>
+        <div class="chart-wrap">
+          <canvas id="weekChart"></canvas>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Today's meals">
+        <h2 class="card-title">Today</h2>
+        <ul class="meal-list" id="mealList"></ul>
+      </section>
+    </main>
+
+    <button type="button" class="fab" id="addMealBtn">+ Log meal</button>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "nutriLensG";
+
+    const defaultState = () => ({
+      goal: 2000,
+      meals: [],
+      history: {},
+    });
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultState();
+        const parsed = JSON.parse(raw);
+        return { ...defaultState(), ...parsed };
+      } catch {
+        return defaultState();
+      }
+    }
+
+    function saveState(state) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    let state = loadState();
+    let ringChart = null;
+    let weekChart = null;
+
+    function todayKey() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function getTodayMeals() {
+      return state.meals.filter((m) => m.date === todayKey());
+    }
+
+    function sumMacros(meals) {
+      return meals.reduce(
+        (acc, m) => ({
+          calories: acc.calories + (m.calories || 0),
+          protein: acc.protein + (m.protein || 0),
+          carbs: acc.carbs + (m.carbs || 0),
+          fat: acc.fat + (m.fat || 0),
+        }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      );
+    }
+
+    function formatDateHeader() {
+      return new Date().toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+    }
+
+    function renderHeader() {
+      document.getElementById("headerDate").textContent = formatDateHeader();
+    }
+
+    function renderSummary() {
+      const totals = sumMacros(getTodayMeals());
+      const remaining = Math.max(0, state.goal - totals.calories);
+
+      document.getElementById("caloriesRemaining").textContent = remaining;
+      document.getElementById("proteinTotal").textContent = Math.round(totals.protein);
+      document.getElementById("carbsTotal").textContent = Math.round(totals.carbs);
+      document.getElementById("fatTotal").textContent = Math.round(totals.fat);
+
+      updateRingChart(totals.calories, state.goal);
+    }
+
+    function renderMeals() {
+      const list = document.getElementById("mealList");
+      const meals = getTodayMeals();
+
+      if (meals.length === 0) {
+        list.innerHTML =
+          '<li class="empty-state">No meals logged yet. Tap below to add your first entry.</li>';
+        return;
+      }
+
+      list.innerHTML = meals
+        .map(
+          (m) => `
+        <li class="meal-item">
+          <span class="meal-item__name">${escapeHtml(m.name)}</span>
+          <span class="meal-item__meta">${escapeHtml(m.mealType || "Meal")}</span>
+          <span class="meal-item__cal">${m.calories} kcal</span>
+        </li>`
+        )
+        .join("");
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function getWeekLabels() {
+      const labels = [];
+      const d = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const day = new Date(d);
+        day.setDate(d.getDate() - i);
+        labels.push(
+          day.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2)
+        );
+      }
+      return labels;
+    }
+
+    function getWeekCalories() {
+      const values = [];
+      const d = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const day = new Date(d);
+        day.setDate(d.getDate() - i);
+        const key = day.toISOString().slice(0, 10);
+        const dayMeals = state.meals.filter((m) => m.date === key);
+        values.push(sumMacros(dayMeals).calories);
+      }
+      return values;
+    }
+
+    function chartColors() {
+      return {
+        accent: "#4ade80",
+        accentDim: "rgba(74, 222, 128, 0.2)",
+        grid: "#262626",
+        text: "#737373",
+        surface: "#111111",
+      };
+    }
+
+    function updateRingChart(consumed, goal) {
+      const ctx = document.getElementById("ringChart");
+      const c = chartColors();
+      const pct = goal > 0 ? Math.min(consumed / goal, 1) : 0;
+
+      const data = {
+        datasets: [
+          {
+            data: [pct, 1 - pct],
+            backgroundColor: [c.accent, c.accentDim],
+            borderWidth: 0,
+          },
+        ],
+      };
+
+      const options = {
+        cutout: "78%",
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        animation: { duration: 400 },
+      };
+
+      if (ringChart) {
+        ringChart.data = data;
+        ringChart.update();
+      } else {
+        ringChart = new Chart(ctx, { type: "doughnut", data, options });
+      }
+    }
+
+    function initWeekChart() {
+      const ctx = document.getElementById("weekChart");
+      const c = chartColors();
+
+      weekChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: getWeekLabels(),
+          datasets: [
+            {
+              label: "Calories",
+              data: getWeekCalories(),
+              backgroundColor: c.accentDim,
+              borderColor: c.accent,
+              borderWidth: 1,
+              borderRadius: 6,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: c.text, font: { family: "'DM Sans'" } },
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: c.grid },
+              ticks: { color: c.text, font: { family: "'DM Sans'" } },
+            },
+          },
+        },
+      });
+    }
+
+    function refreshWeekChart() {
+      if (!weekChart) return;
+      weekChart.data.labels = getWeekLabels();
+      weekChart.data.datasets[0].data = getWeekCalories();
+      weekChart.update();
+    }
+
+    function render() {
+      renderHeader();
+      renderSummary();
+      renderMeals();
+      refreshWeekChart();
+    }
+
+    function addDemoMeal() {
+      const meal = {
+        id: crypto.randomUUID(),
+        date: todayKey(),
+        name: "Sample meal",
+        mealType: "Lunch",
+        calories: 450,
+        protein: 32,
+        carbs: 40,
+        fat: 18,
+      };
+      state.meals.push(meal);
+      saveState(state);
+      render();
+    }
+
+    document.getElementById("addMealBtn").addEventListener("click", addDemoMeal);
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if (typeof Chart === "undefined") {
+        console.error("Chart.js failed to load");
+        return;
+      }
+      initWeekChart();
+      render();
+    });
+  </script>
+</body>
+</html>
