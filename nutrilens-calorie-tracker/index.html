@@ -924,12 +924,128 @@
       display: block;
     }
 
+    /* Goals page */
+    #page-goals {
+      gap: var(--space-md);
+    }
+
+    .goals-progress-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .goals-progress__head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: var(--space-xs);
+    }
+
+    .goals-progress__label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .goals-progress__label--calories { color: var(--color-accent); }
+    .goals-progress__label--protein { color: var(--color-protein); }
+    .goals-progress__label--carbs { color: var(--color-carbs); }
+    .goals-progress__label--fat { color: var(--color-fat); }
+
+    .goals-progress__value {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+    }
+
+    .goals-progress__track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+
+    .goals-progress__fill {
+      height: 100%;
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.8s ease;
+    }
+
+    .goals-progress__fill--calories { background: var(--color-accent); }
+    .goals-progress__fill--protein { background: var(--color-protein); }
+    .goals-progress__fill--carbs { background: var(--color-carbs); }
+    .goals-progress__fill--fat { background: var(--color-fat); }
+
+    .goals-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .goals-form__row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .goals-form__label {
+      width: 80px;
+      flex-shrink: 0;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-text-muted);
+    }
+
+    .goals-form__input {
+      flex: 1;
+      min-width: 0;
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-surface-elevated);
+      color: var(--color-text);
+      font-family: var(--font-body);
+      font-size: 0.9375rem;
+    }
+
+    .goals-form__input:focus {
+      outline: none;
+      border-color: var(--color-accent);
+    }
+
+    .goals-form__unit {
+      font-size: 0.8125rem;
+      color: var(--color-text-subtle);
+      flex-shrink: 0;
+      width: 32px;
+    }
+
+    .goals-save-btn {
+      width: 100%;
+      padding: var(--space-md);
+      margin-top: var(--space-xs);
+      border: none;
+      border-radius: var(--radius-md);
+      background: var(--color-accent);
+      color: var(--color-bg);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.9375rem;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .goals-save-btn:hover {
+      background: var(--color-accent-hover);
+    }
+
     /* Toast */
     .toast {
       position: fixed;
-      bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0));
+      bottom: 70px;
       left: 50%;
-      transform: translateX(-50%) translateY(80px);
+      transform: translateX(-50%) translateY(16px);
       max-width: calc(var(--max-width) - var(--space-md) * 2);
       width: calc(100% - var(--space-md) * 2);
       padding: var(--space-md);
@@ -942,12 +1058,17 @@
       z-index: 100;
       opacity: 0;
       pointer-events: none;
-      transition: transform 0.3s ease, opacity 0.3s ease;
+      transition: opacity 0.3s ease, transform 0.3s ease, background 0.2s ease;
     }
 
     .toast.is-visible {
       opacity: 1;
       transform: translateX(-50%) translateY(0);
+    }
+
+    .toast--error {
+      background: #dc2626;
+      color: #fff;
     }
 
   </style>
@@ -1153,10 +1274,74 @@
     </div>
 
     <div id="page-goals" class="page" role="tabpanel">
-      <div class="page-placeholder">
-        <p class="page-placeholder__title">Goals</p>
-        <p>Set your daily calorie target and macro splits.</p>
-      </div>
+      <section class="card" aria-label="Today's progress">
+        <h2 class="card-title">Today's Progress</h2>
+        <div class="goals-progress-list">
+          <div class="goals-progress">
+            <div class="goals-progress__head">
+              <span class="goals-progress__label goals-progress__label--calories">Calories</span>
+              <span class="goals-progress__value" id="goalProgCalText">0 / 2000 kcal</span>
+            </div>
+            <div class="goals-progress__track">
+              <div class="goals-progress__fill goals-progress__fill--calories" id="goalProgCalBar"></div>
+            </div>
+          </div>
+          <div class="goals-progress">
+            <div class="goals-progress__head">
+              <span class="goals-progress__label goals-progress__label--protein">Protein</span>
+              <span class="goals-progress__value" id="goalProgProteinText">0 / 150 g</span>
+            </div>
+            <div class="goals-progress__track">
+              <div class="goals-progress__fill goals-progress__fill--protein" id="goalProgProteinBar"></div>
+            </div>
+          </div>
+          <div class="goals-progress">
+            <div class="goals-progress__head">
+              <span class="goals-progress__label goals-progress__label--carbs">Carbs</span>
+              <span class="goals-progress__value" id="goalProgCarbsText">0 / 250 g</span>
+            </div>
+            <div class="goals-progress__track">
+              <div class="goals-progress__fill goals-progress__fill--carbs" id="goalProgCarbsBar"></div>
+            </div>
+          </div>
+          <div class="goals-progress">
+            <div class="goals-progress__head">
+              <span class="goals-progress__label goals-progress__label--fat">Fat</span>
+              <span class="goals-progress__value" id="goalProgFatText">0 / 65 g</span>
+            </div>
+            <div class="goals-progress__track">
+              <div class="goals-progress__fill goals-progress__fill--fat" id="goalProgFatBar"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Set daily targets">
+        <h2 class="card-title">Set Daily Targets</h2>
+        <form class="goals-form" id="goalsForm" onsubmit="saveGoals(event)">
+          <div class="goals-form__row">
+            <label class="goals-form__label" for="goalInputCalories">Calories</label>
+            <input class="goals-form__input" type="number" id="goalInputCalories" min="0" step="1" required />
+            <span class="goals-form__unit">kcal</span>
+          </div>
+          <div class="goals-form__row">
+            <label class="goals-form__label" for="goalInputProtein">Protein</label>
+            <input class="goals-form__input" type="number" id="goalInputProtein" min="0" step="1" required />
+            <span class="goals-form__unit">g</span>
+          </div>
+          <div class="goals-form__row">
+            <label class="goals-form__label" for="goalInputCarbs">Carbs</label>
+            <input class="goals-form__input" type="number" id="goalInputCarbs" min="0" step="1" required />
+            <span class="goals-form__unit">g</span>
+          </div>
+          <div class="goals-form__row">
+            <label class="goals-form__label" for="goalInputFat">Fat</label>
+            <input class="goals-form__input" type="number" id="goalInputFat" min="0" step="1" required />
+            <span class="goals-form__unit">g</span>
+          </div>
+          <button type="submit" class="goals-save-btn">Save Goals</button>
+        </form>
+      </section>
     </div>
 
   </div>
@@ -1276,6 +1461,10 @@ Rules:
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
+    function save() {
+      saveState();
+    }
+
     let state = loadState();
     let weekChartInst = null;
     let macroChartInst = null;
@@ -1391,6 +1580,83 @@ Rules:
       if (document.getElementById("page-weekly").classList.contains("active")) {
         renderWeekly();
       }
+      if (document.getElementById("page-goals").classList.contains("active")) {
+        renderGoals();
+      }
+    }
+
+    function setProgressBar(barEl, textEl, current, goal, unit) {
+      const cur = Math.round(current);
+      const tgt = Math.round(goal);
+      textEl.textContent = `${cur} / ${tgt} ${unit}`;
+      const pct = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
+      barEl.style.width = "0%";
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          barEl.style.width = `${pct}%`;
+        });
+      });
+    }
+
+    function renderGoals() {
+      const diary = todayDiary();
+      recalcDiaryTotals(diary);
+      const { totals } = diary;
+      const { goals } = state;
+
+      document.getElementById("goalInputCalories").value = goals.calories;
+      document.getElementById("goalInputProtein").value = goals.protein;
+      document.getElementById("goalInputCarbs").value = goals.carbs;
+      document.getElementById("goalInputFat").value = goals.fat;
+
+      setProgressBar(
+        document.getElementById("goalProgCalBar"),
+        document.getElementById("goalProgCalText"),
+        totals.calories,
+        goals.calories,
+        "kcal"
+      );
+      setProgressBar(
+        document.getElementById("goalProgProteinBar"),
+        document.getElementById("goalProgProteinText"),
+        totals.protein,
+        goals.protein,
+        "g"
+      );
+      setProgressBar(
+        document.getElementById("goalProgCarbsBar"),
+        document.getElementById("goalProgCarbsText"),
+        totals.carbs,
+        goals.carbs,
+        "g"
+      );
+      setProgressBar(
+        document.getElementById("goalProgFatBar"),
+        document.getElementById("goalProgFatText"),
+        totals.fat,
+        goals.fat,
+        "g"
+      );
+    }
+
+    function saveGoals(event) {
+      event.preventDefault();
+
+      const calories = Number(document.getElementById("goalInputCalories").value);
+      const protein = Number(document.getElementById("goalInputProtein").value);
+      const carbs = Number(document.getElementById("goalInputCarbs").value);
+      const fat = Number(document.getElementById("goalInputFat").value);
+
+      if ([calories, protein, carbs, fat].some((n) => !Number.isFinite(n) || n < 0)) {
+        showToast("Please enter valid goal values.", "error");
+        return;
+      }
+
+      state.goals = { calories, protein, carbs, fat };
+      save();
+      updateUI();
+      renderGoals();
+      showToast("Daily targets saved!");
     }
 
     function switchPage(name) {
@@ -1413,6 +1679,9 @@ Rules:
 
       if (name === "weekly") {
         renderWeekly();
+      }
+      if (name === "goals") {
+        renderGoals();
       }
     }
 
@@ -1634,20 +1903,22 @@ Rules:
     }
 
     function updateStreak() {
-      const today = diaryKey();
+      const today = new Date().toDateString();
+      const yesterday = new Date(Date.now() - 86400000).toDateString();
+
       if (state.lastLogDate === today) return;
 
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayKey = diaryKey(yesterday);
-
-      if (state.lastLogDate === yesterdayKey) {
+      if (state.lastLogDate === yesterday) {
         state.streak = (state.streak || 0) + 1;
+        if (state.streak > (state.bestStreak || 0)) {
+          state.bestStreak = state.streak;
+        }
       } else {
         state.streak = 1;
       }
-      state.bestStreak = Math.max(state.bestStreak || 0, state.streak);
+
       state.lastLogDate = today;
+      save();
     }
 
     function addNutrition(food) {
@@ -1666,6 +1937,7 @@ Rules:
         }),
       });
       recalcDiaryTotals(diary);
+      updateStreak();
     }
 
     function parseGeminiJson(text) {
@@ -1736,11 +2008,29 @@ Rules:
       setScanLoading(false);
     }
 
-    function showToast(message) {
+    let toastHideTimer = null;
+
+    function showToast(message, type = "success") {
       const toast = document.getElementById("toast");
+      if (toastHideTimer) {
+        clearTimeout(toastHideTimer);
+        toastHideTimer = null;
+      }
+
       toast.textContent = message;
-      toast.classList.add("is-visible");
-      setTimeout(() => toast.classList.remove("is-visible"), 2500);
+      toast.classList.remove("toast--error", "is-visible");
+      if (type === "error") {
+        toast.classList.add("toast--error");
+      }
+
+      requestAnimationFrame(() => {
+        toast.classList.add("is-visible");
+      });
+
+      toastHideTimer = setTimeout(() => {
+        toast.classList.remove("is-visible");
+        toastHideTimer = null;
+      }, 3200);
     }
 
     function getGeminiApiKey() {
@@ -1810,7 +2100,9 @@ Rules:
 
         renderScanResult(parsed);
       } catch (err) {
-        showScanError(err.message || "Analysis failed. Please try again.");
+        const msg = err.message || "Analysis failed. Please try again.";
+        showScanError(msg);
+        showToast(msg, "error");
       } finally {
         setScanLoading(false);
         document.getElementById("analyzeBtn").disabled = !scanImageBase64;
@@ -1821,7 +2113,6 @@ Rules:
       if (!pendingResult?.foods?.length) return;
 
       pendingResult.foods.forEach((food) => addNutrition(food));
-      updateStreak();
 
       const today = diaryKey();
       const diary = todayDiary();
