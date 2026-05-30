@@ -44,7 +44,7 @@
     @keyframes fadeUp {
       from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(8px);
       }
       to {
         opacity: 1;
@@ -62,6 +62,7 @@
 
     html {
       -webkit-text-size-adjust: 100%;
+      overflow-x: hidden;
     }
 
     body {
@@ -72,6 +73,19 @@
       background: var(--color-bg);
       min-height: 100dvh;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .app {
@@ -82,6 +96,7 @@
       display: flex;
       flex-direction: column;
       padding-bottom: env(safe-area-inset-bottom, 0);
+      overflow-x: hidden;
     }
 
     /* Navigation */
@@ -132,7 +147,7 @@
 
     .nav-tabs {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: var(--space-xs);
       padding-bottom: var(--space-sm);
     }
@@ -167,6 +182,8 @@
       gap: var(--space-md);
       padding: var(--space-md);
       padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0));
+      min-width: 0;
+      max-width: 100%;
     }
 
     .page.active {
@@ -221,7 +238,7 @@
     }
 
     .cal-ring__progress {
-      transition: stroke-dashoffset 0.6s ease;
+      transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .cal-ring__center-value {
@@ -239,7 +256,7 @@
 
     .macro-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: var(--space-sm);
     }
 
@@ -288,7 +305,7 @@
       height: 100%;
       border-radius: 999px;
       width: 0%;
-      transition: width 0.5s ease;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .macro-card__bar-fill--protein { background: var(--color-protein); }
@@ -448,6 +465,8 @@
       border: 1px solid var(--color-border);
       border-radius: var(--radius-lg);
       padding: var(--space-md);
+      min-width: 0;
+      max-width: 100%;
     }
 
     .card-title {
@@ -484,17 +503,15 @@
     .weekly-streak__flame {
       font-size: 2.25rem;
       line-height: 1;
-      animation: flamePulse 1.4s ease-in-out infinite;
+      animation: flamePulse 2s ease-in-out infinite;
     }
 
     @keyframes flamePulse {
       0%, 100% {
         transform: scale(1);
-        opacity: 1;
       }
       50% {
-        transform: scale(1.12);
-        opacity: 0.88;
+        transform: scale(1.08);
       }
     }
 
@@ -539,7 +556,7 @@
 
     .weekly-stats {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: var(--space-sm);
     }
 
@@ -577,12 +594,21 @@
       position: relative;
       height: 170px;
       width: 100%;
+      max-width: 100%;
+      overflow: hidden;
     }
 
     .weekly-donut-wrap {
       position: relative;
       height: 130px;
       width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .weekly-chart-wrap canvas,
+    .weekly-donut-wrap canvas {
+      max-width: 100%;
     }
 
     .macro-legend {
@@ -684,6 +710,7 @@
     .scan-upload__preview {
       display: none;
       width: 100%;
+      max-width: 100%;
       height: 220px;
       object-fit: cover;
     }
@@ -969,7 +996,7 @@
       height: 100%;
       border-radius: 999px;
       width: 0%;
-      transition: width 0.8s ease;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .goals-progress__fill--calories { background: var(--color-accent); }
@@ -1074,6 +1101,9 @@
   </style>
 </head>
 <body>
+  <h2 class="sr-only">
+    NutriLens calorie tracker: scan meals with AI, log daily nutrition, view weekly charts, and set macro goals.
+  </h2>
   <div class="app">
     <nav class="nav" aria-label="Main navigation">
       <div class="nav-top">
@@ -1260,7 +1290,11 @@
       <section class="card" aria-label="7-day calorie chart">
         <h2 class="card-title">7-Day Calories</h2>
         <div class="weekly-chart-wrap">
-          <canvas id="weekBarChart"></canvas>
+          <canvas
+            id="weekBarChart"
+            role="img"
+            aria-label="Bar chart of daily calorie intake over the last seven days with goal line"
+          ></canvas>
         </div>
       </section>
 
@@ -1268,7 +1302,11 @@
         <h2 class="card-title">Today's Macros</h2>
         <div class="macro-legend" id="macroLegend"></div>
         <div class="weekly-donut-wrap">
-          <canvas id="macroDonutChart"></canvas>
+          <canvas
+            id="macroDonutChart"
+            role="img"
+            aria-label="Donut chart of today's protein, carbs, and fat calorie distribution"
+          ></canvas>
         </div>
       </section>
     </div>
@@ -1413,7 +1451,7 @@ Rules:
         if (!base.diary[key]) base.diary[key] = emptyDiaryDay();
         const item = {
           id: m.id || crypto.randomUUID(),
-          emoji: m.emoji || "🍽️",
+          emoji: m.emoji || getEmoji(m.name),
           name: m.name || "Meal",
           calories: m.calories || 0,
           protein: m.protein || 0,
@@ -1447,9 +1485,26 @@ Rules:
       });
     }
 
+    function safeGetItem(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    }
+
+    function safeSetItem(key, value) {
+      try {
+        localStorage.setItem(key, value);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
     function loadState() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = safeGetItem(STORAGE_KEY);
         if (!raw) return defaultState();
         return migrateState(JSON.parse(raw));
       } catch {
@@ -1458,7 +1513,11 @@ Rules:
     }
 
     function saveState() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      try {
+        safeSetItem(STORAGE_KEY, JSON.stringify(state));
+      } catch {
+        /* storage unavailable */
+      }
     }
 
     function save() {
@@ -1510,6 +1569,15 @@ Rules:
       document.getElementById("ringGoalLabel").textContent = `of ${goal} kcal`;
     }
 
+    function animateBarWidth(barEl, pct) {
+      barEl.style.width = "0%";
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          barEl.style.width = `${pct}%`;
+        });
+      });
+    }
+
     function updateMacroBars(totals) {
       const { goals } = state;
       const macros = [
@@ -1521,7 +1589,7 @@ Rules:
       macros.forEach(({ gramsEl, barEl, value, goal }) => {
         document.getElementById(gramsEl).textContent = Math.round(value);
         const pct = goal > 0 ? Math.min((value / goal) * 100, 100) : 0;
-        document.getElementById(barEl).style.width = `${pct}%`;
+        animateBarWidth(document.getElementById(barEl), pct);
       });
     }
 
@@ -1547,7 +1615,7 @@ Rules:
         .map(
           (item) => `
         <li class="food-item">
-          <span class="food-item__emoji" aria-hidden="true">${escapeHtml(item.emoji || "🍽️")}</span>
+          <span class="food-item__emoji" aria-hidden="true">${escapeHtml(item.emoji || getEmoji(item.name))}</span>
           <div class="food-item__body">
             <p class="food-item__name">${escapeHtml(item.name)}</p>
             <p class="food-item__macros">P ${Math.round(item.protein)}g · C ${Math.round(item.carbs)}g · F ${Math.round(item.fat)}g</p>
@@ -1590,12 +1658,7 @@ Rules:
       const tgt = Math.round(goal);
       textEl.textContent = `${cur} / ${tgt} ${unit}`;
       const pct = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
-      barEl.style.width = "0%";
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          barEl.style.width = `${pct}%`;
-        });
-      });
+      animateBarWidth(barEl, pct);
     }
 
     function renderGoals() {
@@ -1886,20 +1949,25 @@ Rules:
       });
     }
 
-    function foodEmoji(name) {
+    function getEmoji(name) {
       const n = (name || "").toLowerCase();
-      if (/salad|lettuce|greens|vegetable/.test(n)) return "🥗";
-      if (/chicken|turkey|meat|steak|beef|pork/.test(n)) return "🍗";
-      if (/fish|salmon|tuna|shrimp|seafood/.test(n)) return "🐟";
-      if (/pizza/.test(n)) return "🍕";
-      if (/burger|sandwich/.test(n)) return "🍔";
-      if (/pasta|noodle|spaghetti/.test(n)) return "🍝";
-      if (/rice|bowl/.test(n)) return "🍚";
-      if (/egg|breakfast/.test(n)) return "🍳";
-      if (/fruit|apple|banana|berry/.test(n)) return "🍎";
-      if (/coffee|latte|drink|smoothie/.test(n)) return "☕";
-      if (/dessert|cake|cookie|chocolate|ice cream/.test(n)) return "🍰";
-      return "🍽️";
+      if (n.includes("pizza")) return "🍕";
+      if (n.includes("burger")) return "🍔";
+      if (n.includes("salad")) return "🥗";
+      if (n.includes("rice")) return "🍚";
+      if (n.includes("chicken")) return "🍗";
+      if (n.includes("pasta")) return "🍝";
+      if (n.includes("sandwich")) return "🥪";
+      if (n.includes("soup")) return "🍲";
+      if (n.includes("egg")) return "🍳";
+      if (n.includes("fish")) return "🐟";
+      if (n.includes("bread")) return "🍞";
+      if (n.includes("steak")) return "🥩";
+      if (n.includes("milk")) return "🥛";
+      if (n.includes("coffee")) return "☕";
+      if (n.includes("cake")) return "🎂";
+      if (n.includes("oat")) return "🥣";
+      return "🍴";
     }
 
     function updateStreak() {
@@ -1925,7 +1993,7 @@ Rules:
       const diary = todayDiary();
       diary.items.push({
         id: crypto.randomUUID(),
-        emoji: foodEmoji(food.name),
+        emoji: getEmoji(food.name),
         name: food.name,
         calories: Number(food.calories) || 0,
         protein: Number(food.protein) || 0,
@@ -1946,12 +2014,11 @@ Rules:
         .replace(/^```json\s*/i, "")
         .replace(/^```\s*/i, "")
         .replace(/\s*```$/g, "");
-      const start = cleaned.indexOf("{");
-      const end = cleaned.lastIndexOf("}");
-      if (start >= 0 && end > start) {
-        cleaned = cleaned.slice(start, end + 1);
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("Could not find JSON in Gemini response.");
       }
-      return JSON.parse(cleaned);
+      return JSON.parse(jsonMatch[0]);
     }
 
     function showScanError(message) {
@@ -2051,8 +2118,9 @@ Rules:
         return;
       }
 
-      localStorage.setItem(API_KEY_STORAGE, apiKey);
+      safeSetItem(API_KEY_STORAGE, apiKey);
       setScanLoading(true);
+      document.getElementById("analyzeBtn").disabled = true;
 
       try {
         const url = `${GEMINI_ENDPOINT}?key=${encodeURIComponent(apiKey)}`;
@@ -2094,8 +2162,8 @@ Rules:
         }
 
         const parsed = parseGeminiJson(text);
-        if (!parsed.foods || !Array.isArray(parsed.foods)) {
-          throw new Error("Invalid response format from Gemini.");
+        if (!parsed.foods || !Array.isArray(parsed.foods) || parsed.foods.length === 0) {
+          throw new Error("No foods detected in this image. Try a clearer photo.");
         }
 
         renderScanResult(parsed);
@@ -2127,14 +2195,14 @@ Rules:
     }
 
     function initScanPage() {
-      const savedKey = localStorage.getItem(API_KEY_STORAGE);
+      const savedKey = safeGetItem(API_KEY_STORAGE);
       if (savedKey) {
         document.getElementById("geminiApiKey").value = savedKey;
       }
 
       document.getElementById("geminiApiKey").addEventListener("change", (e) => {
         const key = e.target.value.trim();
-        if (key) localStorage.setItem(API_KEY_STORAGE, key);
+        if (key) safeSetItem(API_KEY_STORAGE, key);
       });
 
       document.getElementById("scanFileInput").addEventListener("change", (e) => {
