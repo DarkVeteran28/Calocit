@@ -1473,6 +1473,113 @@ Rules:
         console.groupEnd();
       },
 
+      /** Always logs — runs before JSON parsing and before error handling. */
+      logRawResponse(phase, httpStatus, rawBody, parsed) {
+        console.group(`[NutriLens] RAW GEMINI RESPONSE — ${phase} (HTTP ${httpStatus})`);
+        console.log("Raw body string (before JSON.parse):", rawBody);
+        if (parsed !== undefined) {
+          console.log("Parsed object:", parsed);
+        }
+        if (parsed?.error) {
+          console.error("Gemini API error payload:", JSON.stringify(parsed.error, null, 2));
+        }
+        console.groupEnd();
+      },
+
+      extractApiError(parsed) {
+        if (!parsed?.error) return null;
+        const err = parsed.error;
+        const details = Array.isArray(err.details) ? err.details : [];
+        const reasons = details
+          .map((d) => d.reason)
+          .filter(Boolean);
+        const localized = details.find(
+          (d) => d["@type"]?.includes("LocalizedMessage")
+        );
+        return {
+          code: err.code,
+          status: err.status,
+          message: err.message || localized?.message || "Unknown API error",
+          reasons,
+          details,
+          raw: err,
+        };
+      },
+
+      isStructuredOutputConfigError(apiError) {
+        if (!apiError) return false;
+        const msg = (apiError.message || "").toLowerCase();
+        const status = (apiError.status || "").toUpperCase();
+        return (
+          msg.includes("response_schema") ||
+          msg.includes("responseschema") ||
+          msg.includes("response_mime_type") ||
+          msg.includes("responsemime") ||
+          msg.includes("generation_config") ||
+          (status === "INVALID_ARGUMENT" &&
+            (msg.includes("schema") || msg.includes("mime")))
+        );
+      },
+
+      resolveErrorFromApi(httpStatus, parsed) {
+        const apiError = this.extractApiError(parsed);
+        if (apiError) {
+          const { reasons, status, message } = apiError;
+
+          if (reasons.includes("API_KEY_INVALID")) {
+            return {
+              errorType: GeminiErrorType.INVALID_API_KEY,
+              detail: message,
+              apiError,
+            };
+          }
+          if (
+            reasons.includes("RATE_LIMIT_EXCEEDED") ||
+            status === "RESOURCE_EXHAUSTED" ||
+            httpStatus === 429
+          ) {
+            return {
+              errorType: GeminiErrorType.QUOTA_EXCEEDED,
+              detail: message,
+              apiError,
+            };
+          }
+          if (this.isStructuredOutputConfigError(apiError)) {
+            return {
+              errorType: GeminiErrorType.INVALID_AI_RESPONSE,
+              detail: message,
+              apiError,
+              schemaConfigRejected: true,
+            };
+          }
+          return {
+            errorType: GeminiErrorType.INVALID_AI_RESPONSE,
+            detail: message,
+            apiError,
+          };
+        }
+
+        if (httpStatus === 401 || httpStatus === 403) {
+          return {
+            errorType: GeminiErrorType.INVALID_API_KEY,
+            detail: `HTTP ${httpStatus}`,
+            apiError: null,
+          };
+        }
+        if (httpStatus === 429) {
+          return {
+            errorType: GeminiErrorType.QUOTA_EXCEEDED,
+            detail: `HTTP ${httpStatus}`,
+            apiError: null,
+          };
+        }
+        return {
+          errorType: GeminiErrorType.INVALID_AI_RESPONSE,
+          detail: parsed ? JSON.stringify(parsed) : `HTTP ${httpStatus}`,
+          apiError: null,
+        };
+      },
+
       buildEndpoint(apiKey) {
         const url = `${GeminiConfig.ENDPOINT_BASE}/${GeminiConfig.MODEL}:generateContent`;
         return `${url}?key=${encodeURIComponent(apiKey)}`;
@@ -1508,24 +1615,6 @@ Rules:
 
       isRetryableHttpStatus(status) {
         return status === 429 || status === 500 || status === 502 || status === 503;
-      },
-
-      classifyHttpError(status, apiMessage) {
-        const msg = (apiMessage || "").toLowerCase();
-        if (status === 400 || status === 401 || status === 403) {
-          if (
-            msg.includes("api key") ||
-            msg.includes("apikey") ||
-            msg.includes("invalid key") ||
-            msg.includes("permission")
-          ) {
-            return GeminiErrorType.INVALID_API_KEY;
-          }
-        }
-        if (status === 429 || msg.includes("quota") || msg.includes("rate limit")) {
-          return GeminiErrorType.QUOTA_EXCEEDED;
-        }
-        return GeminiErrorType.INVALID_AI_RESPONSE;
       },
 
       classifyFinishReason(finishReason, blockReason) {
@@ -1732,8 +1821,13 @@ Rules:
         return { valid: true };
       },
 
-      async fetchVisionAnalysis(apiKey, imageBase64, mimeType, attemptIndex) {
-        const useStructuredOutput = attemptIndex === 0;
+      async fetchVisionAnalysis(
+        apiKey,
+        imageBase64,
+        mimeType,
+        attemptIndex,
+        useStructuredOutput
+      ) {
         const requestBody = this.buildRequestBody(
           imageBase64,
           mimeType,
@@ -1746,17 +1840,6 @@ Rules:
           attempt: attemptIndex + 1,
           structuredOutput: useStructuredOutput,
           mimeType,
-          body: {
-            ...requestBody,
-            contents: [
-              {
-                parts: [
-                  { inlineData: { mimeType, data: "[base64 omitted]" } },
-                  requestBody.contents[0].parts[1],
-                ],
-              },
-            ],
-          },
         });
 
         const response = await fetch(url, {
@@ -1765,36 +1848,78 @@ Rules:
           body: JSON.stringify(requestBody),
         });
 
+        const rawBody = await response.text();
         let data = null;
+        let bodyParseError = null;
+
         try {
-          data = await response.json();
-        } catch {
+          data = rawBody ? JSON.parse(rawBody) : null;
+        } catch (err) {
+          bodyParseError = err;
           data = null;
         }
 
-        this.debug("Raw response", { status: response.status, data });
+        this.logRawResponse(
+          `fetch attempt ${attemptIndex + 1}`,
+          response.status,
+          rawBody,
+          data
+        );
 
-        return { response, data };
+        if (bodyParseError) {
+          console.error(
+            "[NutriLens] Failed to JSON.parse HTTP body:",
+            bodyParseError
+          );
+        }
+
+        return { response, data, rawBody, bodyParseError };
       },
 
       async analyzeWithRetry(apiKey, imageBase64, mimeType) {
-        let lastError = GeminiErrorType.INVALID_AI_RESPONSE;
+        let lastResult = {
+          ok: false,
+          errorType: GeminiErrorType.INVALID_AI_RESPONSE,
+          detail: "Analysis failed",
+        };
+        let useStructuredOutput = true;
 
         for (let attempt = 0; attempt < GeminiConfig.MAX_RETRIES; attempt++) {
           try {
-            const { response, data } = await this.fetchVisionAnalysis(
-              apiKey,
-              imageBase64,
-              mimeType,
-              attempt
-            );
+            const { response, data, rawBody, bodyParseError } =
+              await this.fetchVisionAnalysis(
+                apiKey,
+                imageBase64,
+                mimeType,
+                attempt,
+                useStructuredOutput
+              );
+
+            if (bodyParseError || !data) {
+              lastResult = {
+                ok: false,
+                errorType: GeminiErrorType.INVALID_AI_RESPONSE,
+                detail: bodyParseError?.message || "Non-JSON HTTP response",
+                rawBody,
+              };
+              if (attempt < GeminiConfig.MAX_RETRIES - 1) {
+                await this.sleep(GeminiConfig.BACKOFF_BASE_MS * 2 ** attempt);
+                continue;
+              }
+              return lastResult;
+            }
 
             if (!response.ok) {
-              lastError = this.classifyHttpError(
-                response.status,
-                data?.error?.message
-              );
-              this.debug("HTTP error", { status: response.status, lastError, data });
+              const resolved = this.resolveErrorFromApi(response.status, data);
+              lastResult = { ok: false, ...resolved, rawBody };
+
+              if (resolved.schemaConfigRejected && useStructuredOutput) {
+                console.warn(
+                  "[NutriLens] Root cause: responseSchema/responseMimeType rejected by API — retrying without structured output."
+                );
+                useStructuredOutput = false;
+                continue;
+              }
 
               if (
                 this.isRetryableHttpStatus(response.status) &&
@@ -1803,8 +1928,29 @@ Rules:
                 await this.sleep(GeminiConfig.BACKOFF_BASE_MS * 2 ** attempt);
                 continue;
               }
-              return { ok: false, errorType: lastError, detail: data?.error?.message };
+              return lastResult;
             }
+
+            if (data.error) {
+              const resolved = this.resolveErrorFromApi(200, data);
+              console.error(
+                "[NutriLens] Gemini returned error inside HTTP 200 body:",
+                data.error
+              );
+              return { ok: false, ...resolved, rawBody };
+            }
+
+            console.log(
+              "[NutriLens] Candidate payload (before text extraction):",
+              JSON.stringify(
+                {
+                  promptFeedback: data.promptFeedback,
+                  candidates: data.candidates,
+                },
+                null,
+                2
+              )
+            );
 
             const { text, finishReason, blockReason } =
               this.extractTextFromResponse(data);
@@ -1814,52 +1960,78 @@ Rules:
             );
 
             if (safetyError) {
-              return { ok: false, errorType: safetyError, detail: finishReason };
+              return {
+                ok: false,
+                errorType: safetyError,
+                detail:
+                  data?.promptFeedback?.blockReason ||
+                  finishReason ||
+                  "Content blocked",
+                rawBody,
+                apiPayload: data,
+              };
             }
 
             if (!text) {
-              lastError = GeminiErrorType.INVALID_AI_RESPONSE;
+              console.warn(
+                "[NutriLens] No text in candidates. Full success payload logged above."
+              );
+              lastResult = {
+                ok: false,
+                errorType: GeminiErrorType.INVALID_AI_RESPONSE,
+                detail:
+                  finishReason === "NO_CANDIDATES"
+                    ? "Gemini returned no candidates. Check API key, model name, or safety filters."
+                    : `No text in response (finishReason: ${finishReason || "unknown"})`,
+                rawBody,
+                apiPayload: data,
+              };
               if (attempt < GeminiConfig.MAX_RETRIES - 1) {
                 await this.sleep(GeminiConfig.BACKOFF_BASE_MS * 2 ** attempt);
                 continue;
               }
-              return {
-                ok: false,
-                errorType: lastError,
-                detail: finishReason || "No text in candidate",
-              };
+              return lastResult;
             }
+
+            console.log(
+              "[NutriLens] Model text (before nutrition JSON parse):",
+              text
+            );
 
             const parseResult = this.parseResponseText(text);
             this.debug("Parse attempts", parseResult.attempts);
-            this.debug("Raw text", text);
 
             if (!parseResult.ok) {
-              this.debug("Parse failure", parseResult.error);
-              lastError = GeminiErrorType.INVALID_AI_RESPONSE;
+              lastResult = {
+                ok: false,
+                errorType: GeminiErrorType.INVALID_AI_RESPONSE,
+                detail: `Could not parse model output as JSON: ${parseResult.error}`,
+                rawBody,
+                modelText: text,
+              };
               if (attempt < GeminiConfig.MAX_RETRIES - 1) {
                 await this.sleep(GeminiConfig.BACKOFF_BASE_MS * 2 ** attempt);
                 continue;
               }
-              return {
-                ok: false,
-                errorType: lastError,
-                detail: parseResult.error,
-              };
+              return lastResult;
             }
 
-            this.debug("Parsed JSON", parseResult.value);
+            this.debug("Parsed nutrition JSON", parseResult.value);
 
             const normalized = this.normalizeNutritionPayload(parseResult.value);
-            this.debug("Normalized result", normalized);
-
             if (!normalized) {
-              lastError = GeminiErrorType.INVALID_AI_RESPONSE;
+              lastResult = {
+                ok: false,
+                errorType: GeminiErrorType.INVALID_AI_RESPONSE,
+                detail: `Model JSON does not match expected nutrition schema: ${JSON.stringify(parseResult.value)}`,
+                rawBody,
+                modelText: text,
+              };
               if (attempt < GeminiConfig.MAX_RETRIES - 1) {
                 await this.sleep(GeminiConfig.BACKOFF_BASE_MS * 2 ** attempt);
                 continue;
               }
-              return { ok: false, errorType: lastError, detail: "Schema mismatch" };
+              return lastResult;
             }
 
             const validation = this.validateNutritionResult(normalized);
@@ -1868,26 +2040,28 @@ Rules:
                 ok: false,
                 errorType: GeminiErrorType.INVALID_AI_RESPONSE,
                 detail: validation.message,
+                rawBody,
+                modelText: text,
               };
             }
 
             return { ok: true, data: normalized };
           } catch (err) {
-            this.debug("Network/exception", err);
-            lastError = GeminiErrorType.NETWORK_ERROR;
+            console.error("[NutriLens] Network/fetch exception:", err);
+            lastResult = {
+              ok: false,
+              errorType: GeminiErrorType.NETWORK_ERROR,
+              detail: err?.message || "Request failed",
+            };
             if (attempt < GeminiConfig.MAX_RETRIES - 1) {
               await this.sleep(GeminiConfig.BACKOFF_BASE_MS * 2 ** attempt);
               continue;
             }
-            return {
-              ok: false,
-              errorType: lastError,
-              detail: err?.message || "Request failed",
-            };
+            return lastResult;
           }
         }
 
-        return { ok: false, errorType: lastError };
+        return lastResult;
       },
     };
 
@@ -2578,11 +2752,14 @@ Rules:
     }
 
     function formatGeminiUserMessage(result) {
-      const lines = [result.errorType];
-      if (result.detail && result.detail !== result.errorType) {
-        lines.push(String(result.detail));
+      const apiMsg = result.apiError?.message;
+      if (apiMsg) {
+        return `${result.errorType}: ${apiMsg}`;
       }
-      return lines.join(" — ");
+      if (result.detail && result.detail !== result.errorType) {
+        return `${result.errorType}: ${result.detail}`;
+      }
+      return result.errorType;
     }
 
     async function analyzeFood() {
@@ -2616,8 +2793,8 @@ Rules:
         if (!result.ok) {
           const userMessage = formatGeminiUserMessage(result);
           showScanError(userMessage);
-          showToast(result.errorType, "error");
-          GeminiVisionService.debug("User-facing error", result);
+          showToast(userMessage, "error");
+          console.error("[NutriLens] Analysis failed — full result:", result);
           return;
         }
 

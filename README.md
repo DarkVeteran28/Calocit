@@ -61,13 +61,20 @@ All Cursor / AI assistant conversation logs for this project should be saved in 
 
 ## Gemini Debug Logging
 
-To log full Gemini request/response/parsing details in the browser console:
+Every scan **always** prints to the browser console (DevTools → Console):
+
+- Raw HTTP body string **before** `JSON.parse`
+- Parsed Gemini payload (including `error` objects)
+- Candidate payload before text extraction
+- Model text **before** nutrition JSON parsing
+
+For extra verbose request metadata:
 
 ```js
 localStorage.setItem('nutriLensGeminiDebug', 'true');
 ```
 
-Reload the page, run a scan, then open DevTools → Console. Set to `'false'` to disable.
+Gemini API errors use the official shape: `error.code`, `error.message`, `error.status`, and `error.details[].reason` (e.g. `API_KEY_INVALID`).
 
 ## License
 
