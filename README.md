@@ -59,6 +59,16 @@ No install, npm, or server required.
 
 All Cursor / AI assistant conversation logs for this project should be saved in the **`ai-logs/`** folder at the repository root. This keeps prompts, iterations, and debugging history together for submission and review.
 
+## Gemini Debug Logging
+
+To log full Gemini request/response/parsing details in the browser console:
+
+```js
+localStorage.setItem('nutriLensGeminiDebug', 'true');
+```
+
+Reload the page, run a scan, then open DevTools → Console. Set to `'false'` to disable.
+
 ## License
 
 Built for educational / competition submission. Gemini API usage is subject to [Google’s terms](https://ai.google.dev/terms).
